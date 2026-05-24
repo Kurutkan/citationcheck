@@ -9,6 +9,10 @@ Metin içi atıfları (Citation) ile referans listesini (Reference) karşılaşt
   → orphan_references
 
 cross_check(citations, references) -> CrossCheckResult
+
+Not: Eşleştirme anahtarı (key) artık doğrudan Citation.key ve Reference.key
+property'leri üzerinden alınır. Bu sayede curly apostroflar (U+2019, U+2018)
+ve diğer normalizasyonlar tek bir yerden (extractors.py) yönetilir.
 """
 from __future__ import annotations
 
@@ -16,8 +20,7 @@ import re
 from dataclasses import dataclass, field
 from typing import List, Optional
 
-from .extractors import Citation, Reference
-
+from .extractors import Citation, Reference, _APOS
 
 @dataclass
 class CrossCheckResult:
@@ -29,7 +32,6 @@ class CrossCheckResult:
     # Eşleşen (tutarlı) atıf-referans sayısı
     matched_count: int = 0
 
-
 def cross_check(
     citations: List[Citation],
     references: List[Reference],
@@ -38,8 +40,8 @@ def cross_check(
     Metin içi atıfları referans listesiyle karşılaştır.
 
     Eşleştirme mantığı:
-    - Her Citation için key = "soyadı|yıl" (lower-case)
-    - Her Reference için key = "soyadı|yıl" (lower-case)
+    - Her Citation için key = "soyadı|yıl" (lower-case, apostrof normalize)
+    - Her Reference için key = "soyadı|yıl" (lower-case, apostrof normalize)
     - Tam anahtar eşleşmesi aranır (MVP düzeyinde yeterli)
     """
     ref_keys: set[str] = set()
@@ -75,20 +77,27 @@ def cross_check(
         matched_count=matched_count,
     )
 
-
 def _ref_key(ref: Reference) -> Optional[str]:
-    """Referans için eşleştirme anahtarı üret: 'soyadı|yıl' (lower-case)."""
+    """
+    Referans için eşleştirme anahtarı üret: 'soyadı|yıl' (lower-case).
+
+    Öncelikle Reference.key property'sini kullanır — orada apostrof normalizasyonu
+    (curly → düz) ve lower-case dönüşümü zaten yapılır. Reference.key None dönerse
+    (yıl/yazar eksikse) fallback olarak ref.raw'dan bir soyad türetir.
+    """
+    # 1) Öncelikli yol: Reference.key property — extractors.py ile aynı normalizasyon
+    primary = ref.key
+    if primary:
+        return primary
+
+    # 2) Fallback: yıl varsa ama yazar yoksa, ham metinden soyad türetmeye çalış
     if not ref.year:
         return None
 
-    authors_raw = (ref.authors_raw or "").strip()
-    if not authors_raw:
-        m = re.search(r"[A-ZÇĞİÖŞÜ][a-zçğıöşü]+", ref.raw or "")
-        surname = m.group(0) if m else ""
-    else:
-        first = re.split(r"[,&]|\band\b|\bve\b", authors_raw)[0].strip()
-        surname = re.sub(r"[^\w\s\-'ÇĞİÖŞÜçğıöşü]", "", first).strip()
-
-    if not surname:
+    m = re.search(r"[A-ZÇĞİÖŞÜ][a-zçğıöşü]+", ref.raw or "")
+    if not m:
         return None
+    surname = m.group(0)
+    # Apostrof normalizasyonu (Reference.key ile tutarlı olmak için)
+    surname = re.sub(_APOS, "'", surname)
     return f"{surname.lower()}|{ref.year[:4]}"
