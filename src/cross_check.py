@@ -4,6 +4,106 @@
 Metin içi atıfları (Citation) ile referans listesini (Reference) karşılaştırır:
 
 - Metin içinde atıfı geçen ama referans listesinde olmayan kaynaklar
+  → missing_in_references
+- Referans listesinde olan ama metin içinde hiç atıf yapılmayan kaynaklar
+  → orphan_references
+
+cross_check(citations, references) -> CrossCheckResult
+"""
+from __future__ import annotations
+
+import re
+from dataclasses import dataclass, field
+from typing import List, Optional
+
+from .extractors import Citation, Reference
+
+
+@dataclass
+class CrossCheckResult:
+    """Çapraz kontrol sonuçları."""
+    # Metinde geçen ama referanslarda bulunmayan atıflar
+    missing_in_references: List[Citation] = field(default_factory=list)
+    # Referanslarda olan ama metinde geçmeyen kaynaklar ("yetim" referans)
+    orphan_references: List[Reference] = field(default_factory=list)
+    # Eşleşen (tutarlı) atıf-referans sayısı
+    matched_count: int = 0
+
+
+def cross_check(
+    citations: List[Citation],
+    references: List[Reference],
+) -> CrossCheckResult:
+    """
+    Metin içi atıfları referans listesiyle karşılaştır.
+
+    Eşleştirme mantığı:
+    - Her Citation için `key` = "soyadı|yıl" (lower-case)
+    - Her Reference için `key` = "soyadı|yıl" (lower-case)
+    - Tam anahtar eşleşmesi aranır (MVP düzeyinde yeterli)
+    """
+    # Referans anahtarları seti
+    ref_keys: set[str] = set()
+    for ref in references:
+        k = _ref_key(ref)
+        if k:
+            ref_keys.add(k)
+
+    # Citation anahtarları seti
+    cit_keys: set[str] = set()
+    for cit in citations:
+        if cit.key:
+            cit_keys.add(cit.key)
+
+    # Metinde geçen ama referanslarda olmayan
+    missing_in_references: List[Citation] = []
+    seen_cit: set[str] = set()
+    for cit in citations:
+        k = cit.key
+        if k and k not in ref_keys and k not in seen_cit:
+            missing_in_references.append(cit)
+            seen_cit.add(k)
+
+    # Referanslarda olan ama metinde geçmeyen ("yetim")
+    orphan_references: List[Reference] = []
+    for ref in references:
+        k = _ref_key(ref)
+        if k and k not in cit_keys:
+            orphan_references.append(ref)
+
+    matched_count = len(cit_keys & ref_keys)
+
+    return CrossCheckResult(
+        missing_in_references=missing_in_references,
+        orphan_references=orphan_references,
+        matched_count=matched_count,
+    )
+
+
+def _ref_key(ref: Reference) -> Optional[str]:
+    """Referans için eşleştirme anahtarı üret: 'soyadı|yıl' (lower-case)."""
+    if not ref.year:
+        return None
+
+    authors_raw = (ref.authors_raw or "").strip()
+    if not authors_raw:
+        # Ham metinden ilk büyük harf kelimeyi al (kaba fallback)
+        m = re.search(r"[A-ZÇĞİÖŞÜ][a-zçğıöşü]+", ref.raw or "")
+        surname = m.group(0) if m else ""
+    else:
+        # "Smith, J." → "Smith" / "Smith & Jones" → "Smith"
+        first = re.split(r"[,&]|\band\b|\bve\b", authors_raw)[0].strip()
+        surname = re.sub(r"[^\w\s\-'ÇĞİÖŞÜçğıöşü]", "", first).strip()
+
+    if not surname:
+        return None
+    return f"{surname.lower()}|{ref.year[:4]}"
+"""
+Çapraz tutarlılık kontrolü.
+
+Metin içi atıfları (Citation) ile referans listesini (Reference) karşılaştırır:
+
+- Metin içinde atıfı geçen ama referans listesinde olmayan kaynaklar
 - Referans listesinde olan ama metin içinde hiç atıf yapılmayan kaynaklar
 
 cross_check(citations, references) -> CrossCheckResult
