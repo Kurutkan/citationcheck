@@ -10,11 +10,14 @@ MVP düzeyinde regex tabanlı; gelişmiş sürümde LLM doğrulama eklenecek.
 NOT: Bu sürüm aşağıdaki kenar durumlarını düzeltir:
 - Mc/Mac/O'/d'/D' önekli soyadlar (O'Donnell, McIntyre, d'Uva, Bago d'Uva)
 - Curly/typographic apostroflar (U+2019, U+2018, U+02BC)
-- Lowercase soyad ön ekleri (van, von, de, del, della, di, da, du, le, la, ...)
+- Lowercase soyad ön ekleri parantez içi atıflarda (van, von, de, del, ...)
 - Çok kelimeli kurumsal yazarlar (World Bank, European Commission, ...)
 - Karma kurumsal listeler (WHO & World Bank, OECD & European Commission)
 - Türkçe söylem belirteçlerinin yanlış yazar olarak yakalanması (Birincisi, Ayrıca, ...)
 - PDF/Word kaynaklı non-breaking ve dar boşluklar
+- "and"/"ve" bağlaçlarının kelime ortasında eşleşmesinin engellenmesi (Handastya, Nanda, ...)
+- Anlatımsal atıflarda yazardan önce sözcük olmamasını zorunlu kılma (la Zadeh yanlış yakalaması)
+- APA-aware kaynakça entry bölme ve yıl-temelli birleştirme
 """
 from __future__ import annotations
 
@@ -41,6 +44,9 @@ _AUTHOR_PART = rf"(?:{_PREFIX_LOWER}\s+)?{_AUTHOR_CORE}"
 # Tam yazar (çok parçalı): "Smith", "Van Dijk", "O'Brien", "Müller-Schmidt", "Bago d'Uva"
 _AUTHOR = rf"{_AUTHOR_PART}(?:[\s\-]{_AUTHOR_PART}){{0,3}}"
 
+# Anlatımsal atıflarda lowercase prefix İSTEMEYEN katı yazar (yan-cümle "la Zadeh" yanlış yakalamasını önler)
+_AUTHOR_STRICT = rf"{_AUTHOR_CORE}(?:[\s\-]{_AUTHOR_CORE}){{0,3}}"
+
 # Kısaltma yazar (acronym): WHO, OECD, FDA, NATO, UNESCO (2-8 büyük harf)
 _ACRONYM = rf"[{_UPPER}]{{2,8}}"
 
@@ -59,8 +65,8 @@ _WS = r"[\s\u00A0\u202F\u2009]"
 # "et al." / "vd." / "ve ark." / "ve diğerleri" varyantları
 _ETAL = rf"(?:et{_WS}*al\.?|vd\.?|ve{_WS}*ark\.?|ve{_WS}*diğerleri)"
 
-# Bağlaçlar: & / and / ve
-_CONJ = r"(?:&|and|ve)"
+# Bağlaçlar: & / and / ve — \b ile kelime sınırı zorunlu (Handastya, Nanda, Sandford gibi soyadların bölünmesini engeller)
+_CONJ = r"(?:&|\band\b|\bve\b)"
 
 # Türkçe iyelik / ilgi ekleri yazara bitişebilir: Reason'ın, Smith'in, Vincent'a
 _POSSESSIVE = rf"(?:{_APOS}[{_LOWER}]+)?"
@@ -69,18 +75,19 @@ _POSSESSIVE = rf"(?:{_APOS}[{_LOWER}]+)?"
 _AUTHORS_PAREN = (
     rf"(?:"
     rf"{_NAME_OR_ORG}"
-    rf"(?:\s*,\s*{_NAME_OR_ORG}){{0,15}}"          # virgüllü ek yazarlar / kurumlar
-    rf"(?:\s*,?\s*{_CONJ}\s*{_NAME_OR_ORG})?"      # son yazar & / ve / and ile bağlı
-    rf"(?:\s*,?\s*{_ETAL})?"                       # et al. / vd. / ve diğerleri
+    rf"(?:\s*,\s*{_NAME_OR_ORG}){{0,15}}"
+    rf"(?:\s*,?\s*{_CONJ}\s*{_NAME_OR_ORG})?"
+    rf"(?:\s*,?\s*{_ETAL})?"
     rf")"
 )
 
 # Yazar listesi (anlatımsal ATIF için): yıl parantezden önceki yazar(lar)
+# NOT: Anlatımsal yazar STRICT — lowercase prefix YOK; "la Zadeh (1965)" cümle parçası olarak yanlış yakalanmasın
 _AUTHORS_NARRATIVE = (
     rf"(?:"
-    rf"{_AUTHOR}{_POSSESSIVE}"
-    rf"(?:\s*,\s*{_AUTHOR})*"
-    rf"(?:\s*{_CONJ}\s*{_AUTHOR})?"
+    rf"{_AUTHOR_STRICT}{_POSSESSIVE}"
+    rf"(?:\s*,\s*{_AUTHOR_STRICT})*"
+    rf"(?:\s*{_CONJ}\s*{_AUTHOR_STRICT})?"
     rf"(?:\s+{_ETAL})?"
     rf"|"
     rf"{_ORG}"
@@ -99,7 +106,9 @@ PAREN_CITATION = re.compile(
 )
 
 # Anlatımsal atıf: Smith (2020), Smith ve Jones (2020), Reason'ın (2000)
+# Lookbehind: yazardan önce harf olmamalı — "metin la Zadeh (1965)" gibi yanlış yakalamayı engeller
 NARRATIVE_CITATION = re.compile(
+    rf"(?<![{_LOWER}{_UPPER}])"
     rf"(?P<authors>{_AUTHORS_NARRATIVE})\s*\((?P<year>\d{{4}}[a-z]?){_PAGE}\)",
     re.UNICODE,
 )
@@ -140,15 +149,15 @@ class Citation:
     def first_author_surname(self) -> str:
         """Eşleştirme için ilk yazarın soyadı (ham, lower-case değil)."""
         cleaned = re.sub(_ETAL, "", self.authors, flags=re.UNICODE).strip()
-        # Türkçe iyelik / ilgi ekini at — AMA yalnızca apostrof + KÜÇÜK HARF + KELİME SONU
-        # ('ın, 'in, 'un, 'a, 'e, 'nın vb.) — apostroflu soyadları (O'Donnell) koru
+        # Türkçe iyelik / ilgi ekini at — yalnızca apostrof + KÜÇÜK HARF + KELİME SONU
         cleaned = re.sub(
             rf"{_APOS}(?:ın|in|un|ün|nın|nin|nun|nün|a|e|ya|ye|da|de|ta|te|den|dan|ki|s)\b",
             "",
             cleaned,
             flags=re.UNICODE,
         )
-        first = re.split(rf"\s*{_CONJ}\s*|\s*,\s*", cleaned, maxsplit=1)[0]
+        # Bağlaçta ve virgülde böl — _CONJ artık word-boundary korumalı (Handastya bölünmez)
+        first = re.split(rf"\s+{_CONJ}\s+|\s*,\s*", cleaned, maxsplit=1)[0]
         return first.strip()
 
     @property
@@ -167,24 +176,26 @@ class Reference:
     title: Optional[str] = None
     doi: Optional[str] = None
 
-    # Doğrulama alanları (provider-bağımsız)
-    validation_match: Optional[dict] = None       # Normalize edilmiş aday kayıt
+    validation_match: Optional[dict] = None
     validation_score: float = 0.0
-    validation_status: str = "unchecked"          # verified | low_confidence | not_found | unchecked
-    validation_provider: Optional[str] = None     # "crossref" | "openalex" | ...
+    validation_status: str = "unchecked"
+    validation_provider: Optional[str] = None
     validation_attempts: List[dict] = field(default_factory=list)
 
-    # LLM alanları
-    llm_parsed: bool = False                      # LLM ile yeniden ayrıştırıldı mı
-    llm_parse_data: Optional[dict] = None         # ParsedReference içeriği (sözlük)
-    hallucination_assessment: Optional[dict] = None  # HallucinationAssessment içeriği
+    llm_parsed: bool = False
+    llm_parse_data: Optional[dict] = None
+    hallucination_assessment: Optional[dict] = None
 
     @property
     def first_author_surname(self) -> Optional[str]:
         if not self.authors_raw:
             return None
-        # APA formatı: "Smith, J., & Jones, K." → ilk virgüle kadar olan
-        first = re.split(r"\s*,\s*|\s*&\s*|\s+and\s+", self.authors_raw)[0]
+        # APA: "O'Donnell, O., van Doorslaer, E., & ..." → ilk virgül soyaddan sonra gelir,
+        # baş harf ve "." içeren parçalardan kaçınmak için: 
+        # Sadece "ad" gibi parçaları (X.X. veya X.) atla; gerçek soyada kadar yürü
+        text = self.authors_raw.strip()
+        # İlk virgüle kadar olan kısım soyaddır (APA kuralı)
+        first = re.split(r"\s*,\s*|\s*&\s*|\s+and\s+", text)[0]
         return first.strip(" .")
 
     @property
@@ -198,24 +209,15 @@ class Reference:
 # --- Yardımcılar ---
 
 def _normalize_whitespace(text: str) -> str:
-    """
-    PDF/Word kaynaklı garip whitespace karakterlerini temizler:
-    - Non-breaking space (U+00A0), narrow no-break (U+202F), thin (U+2009), hair (U+200A) → normal boşluk
-    - Soft hyphen (U+00AD) sil
-    - Satır sonundaki tire ile bölünmüş kelimeleri birleştir
-    - Cümle ortasındaki tek satır sonlarını boşluğa çevir (paragraflar korunur)
-    """
+    """PDF/Word kaynaklı garip whitespace karakterlerini temizler."""
     text = text.replace("\u00AD", "")  # soft hyphen
     text = re.sub(r"[\u00A0\u202F\u2009\u200A]", " ", text)
-    # "kelime-\nkelime" → "kelimekelime"
     text = re.sub(r"([a-zçğıöşüA-ZÇĞİÖŞÜ])-\n([a-zçğıöşüA-ZÇĞİÖŞÜ])", r"\1\2", text, flags=re.UNICODE)
-    # Paragraf içi satır sonu (küçük harf → küçük harf) tek boşluğa
     text = re.sub(r"(?<=[a-zçğıöşü,])\n(?=[a-zçğıöşü])", " ", text, flags=re.UNICODE)
     return text
 
 # --- Çıkarım fonksiyonları ---
 
-# Çoklu atıf yakalama: parantez içinde en az bir yıl bulunan blok
 PAREN_BLOCK = re.compile(r"\(([^()]*\b\d{4}[a-z]?\b[^()]*)\)", re.UNICODE)
 
 def extract_in_text_citations(body: str) -> List[Citation]:
@@ -223,15 +225,13 @@ def extract_in_text_citations(body: str) -> List[Citation]:
     body = _normalize_whitespace(body)
 
     citations: List[Citation] = []
-    matched_spans: List[tuple] = []  # (start, end) parantez içi atıflarınki
+    matched_spans: List[tuple] = []
 
-    # 1) Parantez bloklarını yakala — sonra içini parçala
     for block in PAREN_BLOCK.finditer(body):
         inner = block.group(1)
         block_start = block.start()
         matched_spans.append((block.start(), block.end()))
 
-        # Noktalı virgülle ayrılmış parçalar
         parts_inner = _MULTI_SPLIT.split(inner)
 
         for part in parts_inner:
@@ -248,7 +248,6 @@ def extract_in_text_citations(body: str) -> List[Citation]:
                 )
             )
 
-    # 2) Anlatımsal atıflar — parantez bloklarıyla çakışmasın
     for m in NARRATIVE_CITATION.finditer(body):
         if any(s <= m.start() < e for s, e in matched_spans):
             continue
@@ -256,7 +255,6 @@ def extract_in_text_citations(body: str) -> List[Citation]:
             continue
 
         authors_str = m.group("authors").strip()
-        # Stop-word filtresi: "Birincisi, Williams" gibi yanlış yakalamaları temizle
         first_token = re.split(r"[\s,]+", authors_str)[0]
         if first_token in _NON_AUTHOR_WORDS:
             if "," in authors_str:
@@ -283,13 +281,11 @@ def extract_in_text_citations(body: str) -> List[Citation]:
 
 def _split_reference_entries(refs_text: str) -> List[str]:
     """
-    Kaynakça metnini ayrı kayıtlara böl.
-
-    APA referansları çoğunlukla yeni satırla başlar ve büyük harfle açılır.
-    Asılı girinti (hanging indent) PDF dönüşümünde bozulabilir; bu nedenle
-    iki strateji denenir:
-      1. Boş satıra göre böl
-      2. Yeni satır + büyük harfle başlayan satırlara göre böl
+    Kaynakça metnini ayrı kayıtlara böl. APA-aware:
+    - Önce çift yeni satıra göre dener.
+    - Olmazsa "satır başı + Soyad, X." kalıbına göre böler (X. = baş harf).
+    - Sonra yıl içermeyen parçaları bir önceki entry'ye birleştirir
+      (hanging indent kaybı yaşamış PDF'ler için).
     """
     refs_text = refs_text.strip()
     if not refs_text:
@@ -297,12 +293,30 @@ def _split_reference_entries(refs_text: str) -> List[str]:
 
     # Strateji 1: çift yeni satır
     blocks = re.split(r"\n\s*\n", refs_text)
-    if len(blocks) > 3:  # makul sayıda kayıt
-        return [b.replace("\n", " ").strip() for b in blocks if len(b.strip()) > 20]
+    if len(blocks) > 3:
+        candidates = [b.replace("\n", " ").strip() for b in blocks if len(b.strip()) > 20]
+    else:
+        # Strateji 2: APA-aware — satır başında "Soyad, X." kalıbına göre böl
+        # Soyad: opsiyonel lowercase prefix + büyük harf + (harf|apostrof|tire)+
+        # Ardından virgül + boşluk + büyük harf + nokta (baş harf)
+        pattern = (
+            rf"\n(?=(?:{_PREFIX_LOWER}\s+)?"
+            rf"(?:Mc|Mac|D{_APOS}|d{_APOS}|O{_APOS}|L{_APOS}|l{_APOS})?"
+            rf"[{_UPPER}][{_LOWER}{_UPPER}\-]*{_APOS}?[{_LOWER}{_UPPER}\-]+"
+            rf"\s*,\s*[{_UPPER}]\.)"
+        )
+        lines = re.split(pattern, refs_text, flags=re.UNICODE)
+        candidates = [l.replace("\n", " ").strip() for l in lines if len(l.strip()) > 20]
 
-    # Strateji 2: tek satır + büyük harf başlangıç
-    lines = re.split(rf"\n(?=[{_UPPER}])", refs_text)
-    return [l.replace("\n", " ").strip() for l in lines if len(l.strip()) > 20]
+    # Birleştirme: yıl içermeyen parçaları bir önceki entry'ye ekle
+    merged: List[str] = []
+    year_re = re.compile(r"\(\d{4}[a-z]?\)|\b(?:19|20)\d{2}\b")
+    for c in candidates:
+        if not year_re.search(c) and merged:
+            merged[-1] = merged[-1] + " " + c
+        else:
+            merged.append(c)
+    return merged
 
 def extract_references(refs_text: str) -> List[Reference]:
     """Kaynakça metnini Reference nesnelerine ayır."""
@@ -315,18 +329,14 @@ def extract_references(refs_text: str) -> List[Reference]:
     for entry in entries:
         ref = Reference(raw=entry)
 
-        # DOI
         doi_match = DOI_PATTERN.search(entry)
         if doi_match:
             ref.doi = doi_match.group(0).rstrip(".,;)")
 
-        # Yıl: önce parantez içi, sonra çıplak
         ym = YEAR_IN_PARENS.search(entry)
         if ym:
             ref.year = ym.group(1)
-            # Yazar = yıldan önce
             ref.authors_raw = entry[: ym.start()].strip().rstrip(".,")
-            # Başlık = yıldan sonraki ilk cümle (kabaca)
             after = entry[ym.end():].strip().lstrip(".").strip()
             tm = re.match(r"([^.]+)\.", after)
             if tm:
@@ -335,6 +345,8 @@ def extract_references(refs_text: str) -> List[Reference]:
             ym2 = YEAR_BARE.search(entry)
             if ym2:
                 ref.year = ym2.group(0)
+                # Yıl bulunduysa yazar = yıldan önceki kısım
+                ref.authors_raw = entry[: ym2.start()].strip().rstrip(".,")
 
         references.append(ref)
 
