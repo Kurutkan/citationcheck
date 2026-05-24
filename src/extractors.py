@@ -18,6 +18,7 @@ NOT: Bu sürüm aşağıdaki kenar durumlarını düzeltir:
 - "and"/"ve" bağlaçlarının kelime ortasında eşleşmesinin engellenmesi (Handastya, Nanda, ...)
 - Anlatımsal atıflarda yazardan önce sözcük olmamasını zorunlu kılma (la Zadeh yanlış yakalaması)
 - APA-aware kaynakça entry bölme ve yıl-temelli birleştirme
+- Kaynakça tarafında çok kelimeli soyad ve kurumsal yazar tespiti (Arenliu Qosaj, Özgen Narcı, Bago d'Uva, WHO & World Bank, ...)
 """
 from __future__ import annotations
 
@@ -29,49 +30,49 @@ from typing import List, Optional
 _UPPER = r"A-ZÇĞİÖŞÜ"
 _LOWER = r"a-zçğıöşü"
 
-# Tüm apostrof türleri: düz ', sağ tek tırnak ’, sol tek tırnak ‘, modifier letter apostrophe ʼ, prime ʹ
+# Tüm apostrof türleri
 _APOS = r"['\u2019\u2018\u02BC\u02B9]"
 
-# Lowercase soyad ön ekleri: van, von, de, del, della, di, da, du, le, la, el, al, bin, ibn, ten, ter, der, den, af, av, of
+# Lowercase soyad ön ekleri
 _PREFIX_LOWER = r"(?:van|von|de|del|della|di|da|du|le|la|el|al|bin|ibn|ten|ter|der|den|af|av|of)"
 
-# Tek bir yazar "çekirdek" parçası: Mc/Mac/O'/D'/d'/L'/l' önekleri + büyük harf + küçük harfler
+# Tek bir yazar "çekirdek" parçası
 _AUTHOR_CORE = rf"(?:Mc|Mac|D{_APOS}|d{_APOS}|O{_APOS}|L{_APOS}|l{_APOS})?[{_UPPER}][{_LOWER}]+"
 
-# Bir yazar parçası: isteğe bağlı lowercase ön ek (van, de, ...) + çekirdek
+# Bir yazar parçası: isteğe bağlı lowercase ön ek + çekirdek
 _AUTHOR_PART = rf"(?:{_PREFIX_LOWER}\s+)?{_AUTHOR_CORE}"
 
-# Tam yazar (çok parçalı): "Smith", "Van Dijk", "O'Brien", "Müller-Schmidt", "Bago d'Uva"
+# Tam yazar (çok parçalı)
 _AUTHOR = rf"{_AUTHOR_PART}(?:[\s\-]{_AUTHOR_PART}){{0,3}}"
 
-# Anlatımsal atıflarda lowercase prefix İSTEMEYEN katı yazar (yan-cümle "la Zadeh" yanlış yakalamasını önler)
+# Anlatımsal atıflarda lowercase prefix İSTEMEYEN katı yazar
 _AUTHOR_STRICT = rf"{_AUTHOR_CORE}(?:[\s\-]{_AUTHOR_CORE}){{0,3}}"
 
-# Kısaltma yazar (acronym): WHO, OECD, FDA, NATO, UNESCO (2-8 büyük harf)
+# Kısaltma yazar (acronym): WHO, OECD, FDA, NATO, UNESCO
 _ACRONYM = rf"[{_UPPER}]{{2,8}}"
 
-# Çok kelimeli kurumsal yazar: "World Bank", "European Commission", "United Nations"
+# Çok kelimeli kurumsal yazar
 _ORG_MULTIWORD = rf"[{_UPPER}][{_LOWER}]+(?:\s+(?:{_PREFIX_LOWER}\s+)?[{_UPPER}][{_LOWER}]+){{1,4}}"
 
-# Genel kurumsal yazar (acronym veya çok kelimeli)
+# Genel kurumsal yazar
 _ORG = rf"(?:{_ACRONYM}|{_ORG_MULTIWORD})"
 
 # Bir "isim veya kurum"
 _NAME_OR_ORG = rf"(?:{_AUTHOR}|{_ORG})"
 
-# Whitespace karakter sınıfı: normal boşluk + non-breaking + narrow no-break + thin space
+# Whitespace karakter sınıfı
 _WS = r"[\s\u00A0\u202F\u2009]"
 
 # "et al." / "vd." / "ve ark." / "ve diğerleri" varyantları
 _ETAL = rf"(?:et{_WS}*al\.?|vd\.?|ve{_WS}*ark\.?|ve{_WS}*diğerleri)"
 
-# Bağlaçlar: & / and / ve — \b ile kelime sınırı zorunlu (Handastya, Nanda, Sandford gibi soyadların bölünmesini engeller)
+# Bağlaçlar
 _CONJ = r"(?:&|\band\b|\bve\b)"
 
-# Türkçe iyelik / ilgi ekleri yazara bitişebilir: Reason'ın, Smith'in, Vincent'a
+# Türkçe iyelik / ilgi ekleri
 _POSSESSIVE = rf"(?:{_APOS}[{_LOWER}]+)?"
 
-# Yazar listesi (parantez içi ATIF için):
+# Yazar listesi (parantez içi ATIF için)
 _AUTHORS_PAREN = (
     rf"(?:"
     rf"{_NAME_OR_ORG}"
@@ -81,8 +82,7 @@ _AUTHORS_PAREN = (
     rf")"
 )
 
-# Yazar listesi (anlatımsal ATIF için): yıl parantezden önceki yazar(lar)
-# NOT: Anlatımsal yazar STRICT — lowercase prefix YOK; "la Zadeh (1965)" cümle parçası olarak yanlış yakalanmasın
+# Yazar listesi (anlatımsal ATIF için)
 _AUTHORS_NARRATIVE = (
     rf"(?:"
     rf"{_AUTHOR_STRICT}{_POSSESSIVE}"
@@ -94,26 +94,21 @@ _AUTHORS_NARRATIVE = (
     rf")"
 )
 
-# Sayfa eki: , p. 5 / , pp. 5-7 / , s. 5 / , ss. 5-7
+# Sayfa eki
 _PAGE = r"(?:\s*,\s*(?:p\.|pp\.|s\.|ss\.)\s*[\d\-,\s]+)?"
 
 # --- Atıf desenleri ---
-
-# Parantez içi atıf
 PAREN_CITATION = re.compile(
     rf"\((?P<authors>{_AUTHORS_PAREN})\s*,\s*(?P<year>\d{{4}}[a-z]?){_PAGE}\)",
     re.UNICODE,
 )
 
-# Anlatımsal atıf: Smith (2020), Smith ve Jones (2020), Reason'ın (2000)
-# Lookbehind: yazardan önce harf olmamalı — "metin la Zadeh (1965)" gibi yanlış yakalamayı engeller
 NARRATIVE_CITATION = re.compile(
     rf"(?<![{_LOWER}{_UPPER}])"
     rf"(?P<authors>{_AUTHORS_NARRATIVE})\s*\((?P<year>\d{{4}}[a-z]?){_PAGE}\)",
     re.UNICODE,
 )
 
-# Çoklu atıf ayırıcı: (Smith, 2020; Jones, 2021)
 _MULTI_SPLIT = re.compile(r"\s*;\s*")
 _MULTI_INNER = re.compile(
     rf"(?P<authors>{_AUTHORS_PAREN})\s*,\s*(?P<year>\d{{4}}[a-z]?)",
@@ -125,7 +120,7 @@ DOI_PATTERN = re.compile(r"\b10\.\d{4,9}/[^\s,;]+", re.IGNORECASE)
 YEAR_IN_PARENS = re.compile(r"\((\d{4}[a-z]?)\)")
 YEAR_BARE = re.compile(r"\b(19|20)\d{2}[a-z]?\b")
 
-# Yazar olamayacak Türkçe / İngilizce söylem belirteçleri ve genel sözcükler
+# Yazar olamayacak Türkçe / İngilizce söylem belirteçleri
 _NON_AUTHOR_WORDS = {
     "Birincisi", "İkincisi", "Üçüncüsü", "Dördüncüsü", "Beşincisi",
     "Altıncısı", "Yedincisi", "Sekizincisi",
@@ -142,27 +137,25 @@ class Citation:
     raw: str
     authors: str
     year: str
-    citation_type: str  # "parenthetical" | "narrative"
-    position: int       # karakter ofseti (gövde metni içinde)
+    citation_type: str
+    position: int
 
     @property
     def first_author_surname(self) -> str:
-        """Eşleştirme için ilk yazarın soyadı (ham, lower-case değil)."""
+        """Eşleştirme için ilk yazarın soyadı."""
         cleaned = re.sub(_ETAL, "", self.authors, flags=re.UNICODE).strip()
-        # Türkçe iyelik / ilgi ekini at — yalnızca apostrof + KÜÇÜK HARF + KELİME SONU
         cleaned = re.sub(
             rf"{_APOS}(?:ın|in|un|ün|nın|nin|nun|nün|a|e|ya|ye|da|de|ta|te|den|dan|ki|s)\b",
             "",
             cleaned,
             flags=re.UNICODE,
         )
-        # Bağlaçta ve virgülde böl — _CONJ artık word-boundary korumalı (Handastya bölünmez)
         first = re.split(rf"\s+{_CONJ}\s+|\s*,\s*", cleaned, maxsplit=1)[0]
         return first.strip()
 
     @property
     def key(self) -> str:
-        """Çapraz eşleştirme anahtarı: 'soyad|yıl' (lower-case, apostrof normalize)."""
+        """Çapraz eşleştirme anahtarı: 'soyad|yıl'."""
         sn = self.first_author_surname
         sn = re.sub(_APOS, "'", sn)
         return f"{sn.lower()}|{self.year}"
@@ -188,11 +181,39 @@ class Reference:
 
     @property
     def first_author_surname(self) -> Optional[str]:
+        """
+        APA-aware kaynakça yazar tespiti.
+
+        Tanır:
+        - "Soyad, A." → "Soyad" (klasik APA)
+        - "İki Kelimeli Soyad, A." → "İki Kelimeli Soyad" (Arenliu Qosaj, Özgen Narcı)
+        - "Bago d'Uva, T." → "Bago d'Uva" (apostroflu çok kelimeli)
+        - "WHO" / "OECD" → kurumsal akronim
+        - "World Bank" / "European Commission" → çok kelimeli kurumsal
+        - "WHO, & World Bank" / "OECD, & European Commission" → ilk yazar akronim
+        """
         if not self.authors_raw:
             return None
         text = self.authors_raw.strip()
-        first = re.split(r"\s*,\s*|\s*&\s*|\s+and\s+", text)[0]
-        return first.strip(" .")
+        # İlk yazar bloğunu al: &, "and", ";" ile böl (virgül APA'da soyad/ad ayırıcısı)
+        first_block = re.split(r"\s*&\s*|\s+and\s+|;", text, maxsplit=1)[0].strip()
+        # Sondaki virgülü temizle ("WHO, " → "WHO")
+        first_block = first_block.rstrip(",. ").strip()
+        # 1) APA kalıbı: "Soyad(lar), A." — virgülden sonra baş harf gelirse soyad sol taraf
+        m = re.match(
+            rf"^((?:{_PREFIX_LOWER}\s+)?{_AUTHOR_CORE}(?:[\s\-](?:{_PREFIX_LOWER}\s+)?{_AUTHOR_CORE}){{0,3}})"
+            rf"\s*,\s*[{_UPPER}]\.",
+            first_block,
+            flags=re.UNICODE,
+        )
+        if m:
+            return m.group(1).strip()
+        # 2) Kurumsal yazar (akronim veya çok kelimeli)
+        m_org = re.match(rf"^({_ORG})(?:\s*[,(.]|\s*$)", first_block, flags=re.UNICODE)
+        if m_org:
+            return m_org.group(1).strip()
+        # 3) Fallback: virgülden önceki kısım
+        return first_block.split(",")[0].strip(" .")
 
     @property
     def key(self) -> Optional[str]:
@@ -279,7 +300,8 @@ def _split_reference_entries(refs_text: str) -> List[str]:
     """
     Kaynakça metnini ayrı kayıtlara böl. APA-aware:
     - Önce çift yeni satıra göre dener.
-    - Olmazsa "satır başı + Soyad, X." kalıbına göre böler (X. = baş harf).
+    - Olmazsa "satır başı + Soyad, X." kalıbına göre böler.
+      Çok kelimeli soyadlar (Arenliu Qosaj, Özgen Narcı) ve kurumsal yazarlar (WHO, OECD) da tanınır.
     - Sonra yıl içermeyen parçaları bir önceki entry'ye birleştirir.
     """
     refs_text = refs_text.strip()
@@ -290,12 +312,18 @@ def _split_reference_entries(refs_text: str) -> List[str]:
     if len(blocks) > 3:
         candidates = [b.replace("\n", " ").strip() for b in blocks if len(b.strip()) > 20]
     else:
-        pattern = (
-            rf"\n(?=(?:{_PREFIX_LOWER}\s+)?"
+        # Çok kelimeli soyad + APA virgül-baş-harf VEYA kurumsal akronim ile başlayan satır
+        author_start = (
+            rf"(?:{_PREFIX_LOWER}\s+)?"
             rf"(?:Mc|Mac|D{_APOS}|d{_APOS}|O{_APOS}|L{_APOS}|l{_APOS})?"
             rf"[{_UPPER}][{_LOWER}{_UPPER}\-]*{_APOS}?[{_LOWER}{_UPPER}\-]+"
-            rf"\s*,\s*[{_UPPER}]\.)"
+            rf"(?:\s+(?:{_PREFIX_LOWER}\s+)?"
+            rf"(?:Mc|Mac|D{_APOS}|d{_APOS}|O{_APOS}|L{_APOS}|l{_APOS})?"
+            rf"[{_UPPER}][{_LOWER}{_UPPER}\-]*{_APOS}?[{_LOWER}{_UPPER}\-]+){{0,2}}"
+            rf"\s*,\s*[{_UPPER}]\."
         )
+        org_start = rf"{_ACRONYM}(?:\s*[,(&]|\s+[{_UPPER}])"
+        pattern = rf"\n(?={author_start}|{org_start})"
         lines = re.split(pattern, refs_text, flags=re.UNICODE)
         candidates = [l.replace("\n", " ").strip() for l in lines if len(l.strip()) > 20]
 
