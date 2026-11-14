@@ -14,9 +14,10 @@ PDF, DOCX veya TXT formatında akademik bir makale yüklediğinizde bu uygulama:
 
 - **Metin içi atıfları çıkarır** — parantez içi (Smith, 2020) ve anlatımsal Smith (2020) atıflar dahil; çoklu atıflar (Smith, 2020; Jones, 2021) ayırır.
 - **Türkçe ve İngilizce çalışır** — `vd.`, `ve ark.`, `ve diğerleri`, `et al.` varyantlarını destekler.
+- **Çok parçalı soyadları tanır** — soyad ekleri (`de`, `da`, `dos`, `del`, `de la`, `van der`, `von`, `al-`), çift soyadlar (`Demir Yılmaz`, `Demir-Yılmaz`, `García Márquez`, `Castro e Silva`), 3-5 sözcüklü yazar adları ve aksanlı harfler (`ñ`, `ã`, `ç`, `ø`). Atıf tek soyadla, kaynakça çift soyadla yazılmışsa eşleştirir ve yazım tutarsızlığı olarak bildirir.
 - **Referans listesini ayrıştırır** — yazar, yıl, başlık, DOI alanlarını çıkarır.
 - **Çapraz tutarlılık kontrolü** — metinde atıfı geçen ama kaynakçada olmayan (eksik) ve kaynakçada olan ama metinde geçmeyen (yetim) referansları işaretler.
-- **CrossRef + OpenAlex** ile çoklu kaynak doğrulaması yapar — DOI varsa direkt eşler, yoksa bibliyografik aramaya geçer.
+- **CrossRef + OpenAlex** ile çoklu kaynak doğrulaması yapar — DOI varsa kaydı getirir ve başlık/yazarla karşılaştırır (gerçek DOI başka bir yayına aitse `doi_mismatch` olarak işaretler), yoksa bibliyografik aramaya geçer.
 - **APA 7 biçim kontrolü** — `et al.` kuralı, `&` vs `and`, alfabetik sıra, DOI formatı, sayfa aralığı en-dash, yazar baş harfleri ve daha fazlası.
 - **DOCX biçim kontrolü** — asılı girinti, çift satır aralığı, dergi adı + cilt italikliği kontrolü.
 - **🧠 LLM destekli (opsiyonel):**
@@ -40,27 +41,28 @@ streamlit run app.py
 
 Tarayıcı otomatik olarak `http://localhost:8501` adresinde açılır.
 
-### Anthropic API anahtarı (opsiyonel)
+### Anthropic API anahtarı (opsiyonel, yalnızca kendi anahtarınız)
 
-LLM destekli ayrıştırma ve halüsinasyon tespiti için bir Anthropic API anahtarı gerekir. Üç yolla verebilirsiniz:
+LLM destekli ayrıştırma ve halüsinasyon tespiti için bir Anthropic API anahtarı gerekir. Anahtar **yalnızca arayüzden** girilir: sol panelden "LLM destekli analizi aç" → kendi anahtarınızı yapıştırın. Anahtar sadece o oturumda kullanılır, hiçbir yere kaydedilmez.
 
-1. **UI üzerinden** — sol panelden "LLM destekli analizi aç" → API anahtarınızı yapıştırın. Anahtar sadece o oturumda kullanılır, hiçbir yere kaydedilmez (BYO key).
-2. **Ortam değişkeni** — `export ANTHROPIC_API_KEY=sk-ant-...` ardından Streamlit'i başlatın.
-3. **`.streamlit/secrets.toml`** — proje kökünde `.streamlit/secrets.toml` dosyası oluşturun:
-   ```toml
-   ANTHROPIC_API_KEY = "sk-ant-..."
-   CROSSREF_EMAIL = "you@example.com"  # opsiyonel, polite pool için
-   ```
+Paylaşılan bir sunucu anahtarı **yoktur**: uygulama `secrets.toml` ya da `ANTHROPIC_API_KEY` ortam değişkenindeki anahtarı bilinçli olarak okumaz. Böylece herkese açık bir kurulumda maliyet uygulama sahibine yazılmaz. Anahtar girilmezse LLM özellikleri kapalı kalır, diğer tüm denetimler çalışır.
 
-API anahtarı vermezseniz uygulama yine çalışır; sadece LLM özellikleri devre dışı kalır.
+İsteğe bağlı olarak `.streamlit/secrets.toml` içine yalnızca `CROSSREF_EMAIL = "you@example.com"` yazabilirsiniz (hızlı yanıt havuzu için; gizli bilgi değildir).
+
+### Gizlilik
+
+Yüklenen dosya yalnızca işlem süresince geçici olarak diske yazılır ve iş biter bitmez silinir. En fazla 25 MB dosya kabul edilir.
+
+### Tarayıcıda çalışan sürüm (web/)
+
+`web/citationcheck.html` tek dosyalık, sunucusuz bir sürümdür: metin, DOCX ve PDF tarayıcıda işlenir, belge hiçbir sunucuya gönderilmez. Yalnızca kaynakça satırları CrossRef ve OpenAlex'e sorgu olarak iletilir. API anahtarı gerektirmez. LLM özellikleri ve Word Track Changes bu sürümde yoktur. Testler: `node web/test_core.mjs`.
 
 ### Streamlit Cloud'a deploy
 
 1. Bu repoyu GitHub hesabınıza forklayın (veya doğrudan kullanın).
 2. [share.streamlit.io](https://share.streamlit.io) adresine GitHub ile girin.
 3. "New app" → repo seçin, ana dosya: `app.py`, branch: `main`.
-4. Advanced settings → Secrets bölümüne `ANTHROPIC_API_KEY = "..."` ekleyin (kullanıcılar kendi anahtarını da girebilir).
-5. Deploy. Birkaç dakika içinde herkese açık bir URL'iniz olur.
+4. Deploy. Birkaç dakika içinde herkese açık bir URL'iniz olur.
 
 ---
 
@@ -72,6 +74,7 @@ Upload a PDF, DOCX, or TXT academic paper and this app will:
 
 - **Extract in-text citations** — parenthetical (Smith, 2020) and narrative Smith (2020); splits multi-citations.
 - **Bilingual support** — handles `et al.`, `vd.`, `ve ark.`, `ve diğerleri`.
+- **Multi-part surnames** — particles (`de`, `da`, `dos`, `del`, `de la`, `van der`, `von`, `al-`), double surnames (`García Márquez`, `Castro e Silva`, `Demir-Yılmaz`), 3-5 word author names and accented letters. A citation using one surname is matched to a double-surname reference and reported as a spelling inconsistency.
 - **Parse the reference list** into author/year/title/DOI.
 - **Cross-check consistency** — flags citations missing from references and orphan references (in bibliography but never cited).
 - **Validate against CrossRef + OpenAlex** — DOI lookup first, then bibliographic search with fuzzy matching.
@@ -92,19 +95,21 @@ pip install -r requirements.txt
 streamlit run app.py
 ```
 
-### Anthropic API key (optional)
+### Anthropic API key (optional, bring your own)
 
-LLM-powered parsing and hallucination detection require an Anthropic API key. Three options:
+LLM-powered parsing and hallucination detection require an Anthropic API key, entered **only in the UI** (sidebar → "LLM destekli analizi aç"). It is used for that session and never persisted. There is **no shared server key**: the app deliberately ignores `secrets.toml` and the `ANTHROPIC_API_KEY` environment variable, so a public deployment cannot run up costs for its owner. Without a key, only the LLM features are disabled.
 
-1. **In the UI** — enable "LLM destekli analizi aç" in the sidebar and paste your key. It is used only for that session and never persisted (BYO key).
-2. **Environment variable** — `export ANTHROPIC_API_KEY=sk-ant-...` then run Streamlit.
-3. **`.streamlit/secrets.toml`** in the project root.
+### Privacy
 
-The app works without an API key; only LLM features will be disabled.
+Uploaded files are written to disk only for the duration of processing and deleted immediately. Maximum upload size is 25 MB.
+
+### Browser-only version (web/)
+
+`web/citationcheck.html` is a single-file, serverless build: text, DOCX and PDF are processed in the browser and the document is never uploaded. Only reference lines are sent to CrossRef and OpenAlex as queries. No API key needed. LLM features and Word Track Changes are not included. Tests: `node web/test_core.mjs`.
 
 ### Deploying to Streamlit Cloud
 
-Fork the repo, connect at [share.streamlit.io](https://share.streamlit.io), select `app.py` as the entry point, optionally add `ANTHROPIC_API_KEY` in Secrets, deploy.
+Fork the repo, connect at [share.streamlit.io](https://share.streamlit.io), select `app.py` as the entry point, deploy.
 
 ---
 
@@ -115,6 +120,7 @@ app.py                       # Streamlit UI
 src/
   parsers.py                 # PDF/DOCX/TXT → (body, references)
   extractors.py              # Regex-based citation & reference extraction
+  names.py                   # Surname normalisation and flexible matching
   cross_check.py             # Citation ↔ reference matching
   providers.py               # CrossRef + OpenAlex API wrappers
   validators.py              # Multi-provider validation orchestrator

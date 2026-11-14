@@ -7,14 +7,16 @@ APA Atıf Doğrulayıcı — Streamlit MVP arayüzü.
 """
 from __future__ import annotations
 
+import os
 import tempfile
+from contextlib import contextmanager
 from pathlib import Path
 
 import pandas as pd
 import streamlit as st
 
 from src.parsers import parse_document
-from src.extractors import extract_in_text_citations, extract_references
+from src.extractors import extract_in_text_citations, extract_references, detect_numeric_style
 from src.validators import validate_references_batch
 from src.cross_check import cross_check
 from src.format_checker import (
@@ -134,36 +136,20 @@ with st.sidebar:
         enable_hallucination = False
 
         if enable_llm:
-            # API anahtarı kaynağı önceliği:
-            #   1. Kullanıcı UI'dan girer (en yüksek öncelik — BYO key)
-            #   2. st.secrets["ANTHROPIC_API_KEY"] (deployment owner ön-konfigürasyonu)
-            #   3. ANTHROPIC_API_KEY ortam değişkeni (lokal geliştirme)
-            secrets_key = None
-            try:
-                secrets_key = st.secrets.get("ANTHROPIC_API_KEY", None)
-            except (FileNotFoundError, Exception):
-                # secrets.toml yoksa veya başka bir hata varsa sessizce geç
-                pass
-
-            if secrets_key:
-                st.caption(
-                    "🔑 Sistem yöneticisi tarafından paylaşılan API anahtarı bulundu. "
-                    "Kendi anahtarınızı kullanmak için aşağıya yapıştırın."
-                )
-
-            user_input_key = st.text_input(
-                "Anthropic API anahtarı",
+            # Yalnızca kullanıcının bu oturumda girdiği anahtar kullanılır.
+            # Sunucu tarafında paylaşılan bir anahtar (secrets / ortam değişkeni)
+            # bilinçli olarak OKUNMAZ: maliyet ve kötüye kullanım riski.
+            api_key = st.text_input(
+                "Anthropic API anahtarı (kendi anahtarınız)",
                 type="password",
                 value="",
                 help=(
-                    "API anahtarınız bu oturumda kullanılır, kalıcı saklanmaz. "
-                    "Boş bırakırsanız varsa sistem anahtarı kullanılır. "
-                    "Alternatif: ANTHROPIC_API_KEY ortam değişkeni."
+                    "Anahtarınız yalnızca bu oturumda kullanılır, hiçbir yere kaydedilmez. "
+                    "Anahtar girilmezse LLM özellikleri kapalı kalır; diğer tüm denetimler çalışır."
                 ),
-            )
-
-            # Etkin anahtar: kullanıcı girdisi > secrets > env
-            api_key = user_input_key or secrets_key or None
+            ) or None
+            if not api_key:
+                st.caption("🔑 LLM özellikleri için kendi API anahtarınızı girin.")
 
             enable_llm_parsing = st.checkbox(
                 "Bozuk referansları LLM ile ayrıştır",
@@ -214,24 +200,55 @@ if uploaded is None:
     akademik forensik mantıkla değerlendirir (Claude Sonnet)
   - Yapay zekâyla yazılmış makalelerdeki sahte referansları tespit etmek için kritik
 
-**Henüz yapmaz (sonraki iş paketlerinde):**
-- APA 7 biçim hatalarının ayrıntılı raporlanması (italik, noktalama, sıralama)
-- LLM destekli "regex'in kaçırdığı atıfları yakala" özelliği
-- Semantic Scholar / Google Scholar yedek doğrulama
-- PDF üstüne renkli işaretleme ve Word Track Changes ile düzeltme önerisi
+- **APA 7 biçim denetimi** ve DOCX için **Word Track Changes** ile düzeltme önerisi
+- **Çok parçalı soyadlar:** `de Souza`, `van der Berg`, `García Márquez`, `Demir-Yılmaz`,
+  3-5 sözcüklü yazar adları; tek soyadla yapılan atfı çift soyadlı kayıtla eşleştirir
+- `t.y.` / `n.d.` ve `baskıda` / `in press` atıfları, ikincil atıflar (`akt.`, `as cited in`)
+
+**Yapmaz:**
+- Numaralı atıf sistemleri (Vancouver, IEEE) için metin-kaynakça eşleştirmesi
+- Yalnızca ilk yazar karşılaştırılır; ikinci ve sonraki yazarların tutarlılığı denetlenmez
+- Taranmış (görüntü) PDF'lerde OCR
 - BibTeX / RIS dışa aktarımı
+
+**Gizlilik:** Yüklediğiniz dosya yalnızca işlem süresince geçici olarak yazılır ve hemen silinir.
+Paylaşılan bir API anahtarı yoktur; LLM özellikleri yalnızca kendi anahtarınızla çalışır.
 """
         )
     st.stop()
 
 # --- İşlem akışı ---
-with tempfile.NamedTemporaryFile(delete=False, suffix=Path(uploaded.name).suffix) as tmp:
-    tmp.write(uploaded.read())
-    tmp_path = tmp.name
+MAX_UPLOAD_MB = 25
+
+
+@contextmanager
+def _as_temp_file(data: bytes, suffix: str):
+    """Veriyi geçici dosyaya yaz, iş bitince dosyayı mutlaka sil.
+
+    Yüklenen makale (çoğu zaman yayımlanmamış bir çalışma) sunucuda kalmamalıdır.
+    """
+    tmp = tempfile.NamedTemporaryFile(delete=False, suffix=suffix)
+    try:
+        tmp.write(data)
+        tmp.close()
+        yield tmp.name
+    finally:
+        try:
+            os.unlink(tmp.name)
+        except OSError:
+            pass
+
+
+uploaded_bytes = uploaded.getvalue()
+uploaded_suffix = Path(uploaded.name).suffix
+if len(uploaded_bytes) > MAX_UPLOAD_MB * 1024 * 1024:
+    st.error(f"Dosya çok büyük. En fazla {MAX_UPLOAD_MB} MB yükleyebilirsiniz.")
+    st.stop()
 
 try:
     with st.spinner("📄 Belge okunuyor ve bölümlere ayrılıyor..."):
-        body, refs_section = parse_document(tmp_path)
+        with _as_temp_file(uploaded_bytes, uploaded_suffix) as tmp_path:
+            body, refs_section = parse_document(tmp_path)
 except Exception as e:
     st.error(f"Belge okunamadı: {e}")
     st.stop()
@@ -244,6 +261,13 @@ if not refs_section:
 
 with st.spinner("🔍 Metin içi atıflar çıkarılıyor..."):
     citations = extract_in_text_citations(body)
+
+if detect_numeric_style(body, len(citations)):
+    st.warning(
+        "⚠️ Bu belge numaralı atıf sistemi (Vancouver / IEEE: [1], [2-4]) kullanıyor görünüyor. "
+        "Bu araç yazar-tarih (APA) atıflarını denetler; numaralı atıflar için metin-kaynakça "
+        "eşleştirmesi yapılmaz. Kaynakların veritabanı doğrulaması yine çalışır."
+    )
 
 with st.spinner("📑 Referans listesi ayrıştırılıyor..."):
     references = extract_references(refs_section)
@@ -281,7 +305,8 @@ docx_inspection = None
 if Path(uploaded.name).suffix.lower() == ".docx":
     from src.docx_inspector import inspect_docx
     with st.spinner("📐 DOCX biçim metaverileri okunuyor (italik, girinti, satır aralığı)..."):
-        docx_inspection = inspect_docx(tmp_path, references)
+        with _as_temp_file(uploaded_bytes, ".docx") as tmp_path:
+            docx_inspection = inspect_docx(tmp_path, references)
 
 # --- APA 7 biçim kontrolü (DOCX inspection varsa onu da kullanır) ---
 format_issues = check_apa_format(citations, references, docx_inspection)
@@ -349,11 +374,18 @@ if enable_validation and selected_providers and references:
     verified = sum(1 for r in refs_to_check if r.validation_status == "verified")
     low = sum(1 for r in refs_to_check if r.validation_status == "low_confidence")
     notfound = sum(1 for r in refs_to_check if r.validation_status == "not_found")
+    doi_mismatch = [r for r in refs_to_check if r.validation_status == "doi_mismatch"]
 
     v1, v2, v3, v4 = st.columns(4)
     v1.metric("✅ Doğrulandı", verified)
     v2.metric("⚠️ Düşük güven", low)
     v3.metric("❌ Bulunamadı", notfound)
+    if doi_mismatch:
+        st.error(
+            f"🚩 {len(doi_mismatch)} kaynakta DOI gerçek, ancak başka bir yayına ait: "
+            "DOI'nin gösterdiği kayıt, kaynakçadaki başlık/yazar ile uyuşmuyor. "
+            "Uydurma kaynaklarda sık görülen bir örüntüdür; Referanslar sekmesinden inceleyin."
+        )
 
     # Provider katkısı: hangi kaynak kaç kez başarılı oldu
     provider_hits = {}
@@ -447,6 +479,7 @@ with tab_ref:
                 "verified": "background-color: #d4edda",
                 "low_confidence": "background-color: #fff3cd",
                 "not_found": "background-color: #f8d7da",
+                "doi_mismatch": "background-color: #f5c6cb; font-weight: bold",
             }
             return colors.get(val, "")
 
@@ -498,6 +531,20 @@ with tab_cross:
                 st.warning(preview)
         else:
             st.success("Tüm referanslar metinde kullanılmış. ✓")
+
+    if cross_result.fuzzy_matches:
+        st.markdown("#### 🔎 Eşleşti, ancak soyad yazımı tutarsız")
+        st.caption(
+            "Bu atıflar kaynakçadaki kayıtla eşleştirildi; fakat soyad iki yerde farklı "
+            "yazılmış (eksik ikinci soyad, tire/boşluk farkı, bitişik yazım veya olası "
+            "yazım hatası). Metin ile kaynakçayı aynı biçime getirin."
+        )
+        for fm in cross_result.fuzzy_matches:
+            label = "olası yazım hatası" if fm.kind == "typo" else "farklı yazım"
+            st.info(
+                f"`{fm.citation.raw}` ↔ kaynakçada **{fm.reference.first_author_surname}** "
+                f"({fm.reference.year}) — {label}"
+            )
 
 with tab_fmt:
     if not format_issues:
@@ -718,23 +765,26 @@ with tab_dl:
         )
 
         if st.button("🛠️ Track Changes Yaması Üret", type="primary", use_container_width=True):
-            output_path = tempfile.NamedTemporaryFile(
-                delete=False, suffix=".docx", prefix="patched_"
-            ).name
-
+            patched_bytes = None
             with st.spinner("📝 Word Track Changes yaması oluşturuluyor..."):
-                try:
-                    patch_result = generate_track_changes_patch(
-                        input_docx_path=tmp_path,
-                        output_docx_path=output_path,
-                        citations=citations,
-                        references=references,
-                        inspection=docx_inspection,
-                        format_issues=format_issues,
-                    )
-                except Exception as e:
-                    st.error(f"Yama üretilemedi: {e}")
-                    st.stop()
+                # Girdi ve çıktı geçici dosyaları iş biter bitmez silinir.
+                with _as_temp_file(uploaded_bytes, ".docx") as tmp_path, \
+                        _as_temp_file(b"", ".docx") as output_path:
+                    try:
+                        patch_result = generate_track_changes_patch(
+                            input_docx_path=tmp_path,
+                            output_docx_path=output_path,
+                            citations=citations,
+                            references=references,
+                            inspection=docx_inspection,
+                            format_issues=format_issues,
+                        )
+                        with open(output_path, "rb") as f:
+                            patched_bytes = f.read()
+                    except Exception as e:
+                        st.error(f"Yama üretilemedi: {e}")
+            if patched_bytes is None:
+                st.stop()
 
             st.success(
                 f"✓ {patch_result.applied_count} değişiklik uygulandı, "
@@ -747,14 +797,13 @@ with tab_dl:
                     st.markdown(f"- {cat}: **{count}** değişiklik")
 
             # İndirme butonu
-            with open(output_path, "rb") as f:
-                st.download_button(
-                    "📥 Yamalı DOCX'i İndir (Track Changes ile)",
-                    data=f.read(),
-                    file_name=f"patched_{Path(uploaded.name).stem}.docx",
-                    mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
-                    use_container_width=True,
-                )
+            st.download_button(
+                "📥 Yamalı DOCX'i İndir (Track Changes ile)",
+                data=patched_bytes,
+                file_name=f"patched_{Path(uploaded.name).stem}.docx",
+                mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+                use_container_width=True,
+            )
 
             st.caption(
                 "💡 İpucu: Word'de açtıktan sonra üst şeritte **İncele** sekmesinden "

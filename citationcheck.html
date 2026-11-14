@@ -1,0 +1,929 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Citation and Reference Checker | citationcheck</title>
+<style>body{margin:0;padding:24px 12px;background:#E3EAF5}
+#ccx#ccx{--navy:#0B2545;--navy2:#163560;--ink:#22324D;--soft:#51607A;--paper:#F6F8FC;--alt:#E3EAF5;--amber:#F4A300;--red:#C01F35;--green:#1B7F5A;--line:#D5DEEC;
+font-family:Inter,-apple-system,"Segoe UI",Roboto,Arial,sans-serif;color:var(--ink);background:var(--paper);font-size:17px;line-height:1.55;max-width:1180px;margin:0 auto;border-radius:24px;overflow:hidden;text-align:left}
+#ccx#ccx *{box-sizing:border-box}
+#ccx#ccx .ccx-hide{position:absolute;width:1px;height:1px;opacity:0;pointer-events:none}
+#ccx#ccx .ccx-hero{background:var(--navy);color:#E6ECF5;padding:40px clamp(18px,4vw,48px) 34px}
+#ccx#ccx .ccx-top{display:flex;justify-content:space-between;align-items:center;gap:16px;margin-bottom:12px}
+#ccx#ccx .ccx-kicker{font-size:13px;font-weight:700;letter-spacing:2.2px;text-transform:uppercase;color:var(--amber)}
+#ccx#ccx .ccx-title{font-family:Montserrat,Inter,-apple-system,"Segoe UI",Arial,sans-serif;font-weight:800;font-size:clamp(28px,4.4vw,46px);line-height:1.12;margin:0 0 12px;color:#F6F8FC;text-transform:none;letter-spacing:0}
+#ccx#ccx .ccx-lede{font-size:19px;max-width:780px;margin:0;color:#E6ECF5}
+#ccx#ccx .ccx-lang{display:flex;border:1.5px solid #5d7399;border-radius:999px;overflow:hidden}
+#ccx#ccx .ccx-lang button{font:inherit;font-size:13px;font-weight:700;letter-spacing:1px;padding:5px 14px;margin:0;border:0;border-radius:0;background:transparent;color:#E6ECF5;cursor:pointer;min-height:0;box-shadow:none}
+#ccx#ccx .ccx-lang button[aria-pressed=true]{background:var(--amber);color:var(--navy)}
+#ccx#ccx .ccx-card{padding:28px clamp(18px,4vw,48px) 22px;border-bottom:1px solid var(--line)}
+#ccx#ccx .ccx-label{display:block;font-weight:700;color:var(--navy);margin:0 0 8px;font-size:16px}
+#ccx#ccx textarea{display:block;width:100%;min-height:230px;resize:vertical;font:inherit;font-size:15.5px;line-height:1.5;color:var(--ink);background:#fff;border:1.5px solid var(--line);border-radius:14px;padding:14px 16px;margin:0;box-shadow:none}
+#ccx#ccx textarea:focus-visible,#ccx#ccx button:focus-visible,#ccx#ccx label.ccx-btn:focus-visible,#ccx#ccx a:focus-visible{outline:3px solid var(--amber);outline-offset:2px}
+#ccx#ccx .ccx-actions,#ccx#ccx .ccx-bar{display:flex;flex-wrap:wrap;gap:10px;margin:14px 0 0;align-items:center}
+#ccx#ccx .ccx-btn{display:inline-flex;align-items:center;justify-content:center;font:inherit;font-size:15.5px;font-weight:700;line-height:1.25;letter-spacing:0;text-transform:none;text-decoration:none;color:var(--navy);background:#fff;border:1.5px solid var(--navy);border-radius:999px;padding:10px 20px;margin:0;cursor:pointer;min-height:0;width:auto;box-shadow:none}
+#ccx#ccx .ccx-btn:hover{background:var(--alt);color:var(--navy)}
+#ccx#ccx .ccx-btn.ccx-primary{background:var(--navy);color:#F6F8FC}
+#ccx#ccx .ccx-btn.ccx-primary:hover{background:var(--navy2);color:#fff}
+#ccx#ccx .ccx-btn.ccx-ghost{border-color:var(--line);font-weight:600}
+#ccx#ccx .ccx-btn[disabled]{opacity:.65;cursor:progress}
+#ccx#ccx .ccx-privacy,#ccx#ccx .ccx-sub{font-size:14.5px;color:var(--soft);margin:14px 0 0}
+#ccx#ccx .ccx-note{margin:14px 0 0;padding:12px 16px;border-radius:12px;font-size:15.5px;border-left:5px solid var(--line);background:#fff}
+#ccx#ccx .ccx-note.ccx-bad{border-color:var(--red);background:#FCEBEE}
+#ccx#ccx .ccx-note.ccx-warn{border-color:var(--amber);background:#FFF6DF}
+#ccx#ccx .ccx-note.ccx-ok{border-color:var(--green);background:#E7F5EF}
+#ccx#ccx .ccx-note.ccx-info{border-color:var(--navy);background:var(--alt)}
+#ccx#ccx .ccx-out{padding:0 clamp(18px,4vw,48px)}
+#ccx#ccx .ccx-out:empty{display:none}
+#ccx#ccx .ccx-metrics{display:grid;grid-template-columns:repeat(5,1fr);gap:12px;margin:26px 0 0}
+#ccx#ccx .ccx-metrics.ccx-small{grid-template-columns:repeat(auto-fit,minmax(130px,1fr));margin-top:16px}
+#ccx#ccx .ccx-metric{background:#fff;border:1px solid var(--line);border-top:5px solid var(--navy);border-radius:14px;padding:14px 16px}
+#ccx#ccx .ccx-metric b{display:block;font-family:Montserrat,Inter,Arial,sans-serif;font-size:34px;font-weight:800;line-height:1;color:var(--navy)}
+#ccx#ccx .ccx-small .ccx-metric b{font-size:26px}
+#ccx#ccx .ccx-metric span{font-size:14px;color:var(--soft)}
+#ccx#ccx .ccx-metric.ccx-bad{border-top-color:var(--red)}#ccx#ccx .ccx-metric.ccx-bad b{color:var(--red)}
+#ccx#ccx .ccx-metric.ccx-warn{border-top-color:var(--amber)}
+#ccx#ccx .ccx-metric.ccx-ok{border-top-color:var(--green)}
+#ccx#ccx .ccx-tabs{display:flex;flex-wrap:wrap;gap:6px;margin:26px 0 0;border-bottom:2px solid var(--navy)}
+#ccx#ccx .ccx-tabs button{font:inherit;font-size:15.5px;font-weight:700;color:var(--navy);background:var(--alt);border:0;border-radius:12px 12px 0 0;padding:10px 18px;margin:0;cursor:pointer;min-height:0;box-shadow:none;text-transform:none;letter-spacing:0}
+#ccx#ccx .ccx-tabs button[aria-selected=true]{background:var(--navy);color:#F6F8FC}
+#ccx#ccx .ccx-count{display:inline-block;min-width:24px;padding:0 7px;border-radius:999px;background:rgba(255,255,255,.75);color:var(--navy);font-size:13px;text-align:center}
+#ccx#ccx .ccx-panel{padding:8px 0 30px}
+#ccx#ccx .ccx-two{display:grid;grid-template-columns:1fr 1fr;gap:22px}
+#ccx#ccx .ccx-list h3{font-family:Montserrat,Inter,Arial,sans-serif;font-size:18px;font-weight:700;color:var(--navy);margin:22px 0 10px;text-transform:none;letter-spacing:0;line-height:1.3}
+#ccx#ccx ul{list-style:none;margin:0;padding:0}
+#ccx#ccx .ccx-list li,#ccx#ccx .ccx-fmt li{background:#fff;border:1px solid var(--line);border-left:5px solid var(--line);border-radius:10px;padding:10px 14px;margin:0 0 8px;font-size:15px;overflow-wrap:anywhere}
+#ccx#ccx li.ccx-bad{border-left-color:var(--red)}#ccx#ccx li.ccx-warn{border-left-color:var(--amber)}#ccx#ccx li.ccx-info{border-left-color:var(--navy)}
+#ccx#ccx code{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:14px;background:var(--alt);color:var(--navy);border-radius:6px;padding:2px 6px;white-space:pre-wrap;overflow-wrap:anywhere}
+#ccx#ccx small{display:block;color:var(--soft);font-size:13.5px;margin-top:4px}
+#ccx#ccx .ccx-fmt{margin-top:18px}
+#ccx#ccx .ccx-fmt strong{display:block;font-weight:600;color:var(--navy);margin-bottom:6px}
+#ccx#ccx .ccx-scroll{overflow-x:auto;margin-top:16px;border:1px solid var(--line);border-radius:12px;background:#fff}
+#ccx#ccx table{width:100%;border-collapse:collapse;margin:0;border:0;font-size:14.5px;table-layout:auto;background:#fff}
+#ccx#ccx th,#ccx#ccx td{border:0;border-top:1px solid var(--line);padding:8px 12px;text-align:left;vertical-align:top;background:none;overflow-wrap:break-word;word-break:normal}
+#ccx#ccx thead th{border-top:0;background:var(--navy);color:#F6F8FC;font-weight:700;white-space:nowrap}
+#ccx#ccx td a{color:var(--navy2)}
+#ccx#ccx .ccx-pill{display:inline-block;font-size:12.5px;font-weight:700;border-radius:999px;padding:2px 10px;white-space:nowrap;background:var(--alt);color:var(--navy)}
+#ccx#ccx .ccx-pill.ccx-ok{background:#D8F0E6;color:#0F5A3F}#ccx#ccx .ccx-pill.ccx-bad{background:#F9D9DE;color:#8F1325}#ccx#ccx .ccx-pill.ccx-warn{background:#FFE9B5;color:#6B4700}
+#ccx#ccx .ccx-progress{height:8px;background:var(--alt);border-radius:999px;overflow:hidden;margin-top:12px}
+#ccx#ccx .ccx-progress[hidden]{display:none}
+#ccx#ccx .ccx-progress div{height:100%;width:0;background:var(--amber);transition:width .2s}
+#ccx#ccx .ccx-foot{padding:20px clamp(18px,4vw,48px) 28px;font-size:14px;color:var(--soft);border-top:1px solid var(--line)}
+#ccx#ccx .ccx-foot p{margin:0 0 6px}
+#ccx#ccx .ccx-foot a{color:var(--red)}
+@media (max-width:820px){#ccx#ccx .ccx-metrics{grid-template-columns:1fr 1fr}#ccx#ccx .ccx-two{grid-template-columns:1fr}#ccx#ccx{border-radius:16px;font-size:16px}}
+@media (prefers-reduced-motion:reduce){#ccx#ccx .ccx-progress div{transition:none}}
+#ccx#ccx .ccx-vtop{margin-top:18px}
+#ccx#ccx .ccx-vtop .ccx-sub{margin:0;flex:1 1 260px}</style>
+</head>
+<body>
+<div id="ccx"><noscript>Bu araç JavaScript gerektirir.</noscript></div>
+<script>
+/* citationcheck: tarayıcı çekirdeği (DOM kullanmaz; Node ile test edilebilir).
+   Python sürümündeki src/extractors.py, names.py, cross_check.py, parsers.py ve
+   validators.py mantığının JavaScript karşılığıdır. */
+var CitationCheck = (function () {
+  "use strict";
+
+  // ---------- Harf sınıfları ve yapı taşları ----------
+  var U = "\\p{Lu}", L = "\\p{Ll}";
+  var APOS = "['\\u2019\\u2018\\u02BC\\u02B9]";
+  var WB0 = "(?<![\\p{L}\\p{N}_])", WB1 = "(?![\\p{L}\\p{N}_])";
+  var PREFIX_LOWER = "(?:van|von|vom|zu|zum|zur|der|den|het|ten|ter|te|" +
+    "de|del|della|dello|dei|degli|delle|di|da|das|do|dos|du|des|" +
+    "le|la|las|los|lo|el|al|bin|ibn|ben|af|av|of)";
+  var PREFIXES = "(?:" + PREFIX_LOWER + "\\s+){1,3}";
+  var HYPH = "\\-\\u2010\\u2011";
+  var CORE_PREFIX = "(?:Mc|Mac|[DdOoLlNnMm]" + APOS + "|al[" + HYPH + "]|el[" + HYPH + "])";
+  var AUTHOR_CORE = CORE_PREFIX + "?" + U + L + "+(?:" + U + L + "+)?";
+  var AUTHOR_PART = "(?:" + PREFIXES + ")?" + AUTHOR_CORE;
+  var AUTHOR = AUTHOR_PART + "(?:[\\s" + HYPH + "]" + AUTHOR_PART + "){0,4}";
+  var AUTHOR_STRICT = AUTHOR_CORE + "(?:[\\s" + HYPH + "](?:" + PREFIXES + ")?" + AUTHOR_CORE + "){0,4}";
+  var ACRONYM = U + "{2,8}";
+  var ORG_MULTI = U + L + "+(?:\\s+(?:" + PREFIXES + ")?" + U + L + "+){1,4}";
+  var ORG = "(?:" + ACRONYM + "|" + ORG_MULTI + ")";
+  var NAME_OR_ORG = "(?:" + AUTHOR + "|" + ORG + ")";
+  var ETAL = "(?:et\\s*al\\.?|vd\\.?|ve\\s*ark\\.?|ve\\s*diğerleri)";
+  var CONJ = "(?:&|" + ["and", "ve", "y", "e", "et", "und"].map(function (w) { return WB0 + w + WB1; }).join("|") + ")";
+  var POSSESSIVE = "(?:" + APOS + L + "+)?";
+  var AUTHORS_PAREN = "(?:" + NAME_OR_ORG + "(?:\\s*,\\s*" + NAME_OR_ORG + "){0,15}" +
+    "(?:\\s*,?\\s*" + CONJ + "\\s*" + NAME_OR_ORG + ")?(?:\\s*,?\\s*" + ETAL + ")?)";
+  var AUTHORS_NARR = "(?:" + AUTHOR_STRICT + POSSESSIVE + "(?:\\s*,\\s*" + AUTHOR_STRICT + ")*" +
+    "(?:\\s*" + CONJ + "\\s*" + AUTHOR_STRICT + ")?(?:\\s+" + ETAL + ")?|" + ORG + ")";
+  var YEAR = "(?:\\d{4}[a-z]?|n\\.\\s?d\\.|t\\.\\s?y\\.|in\\s+press|baskıda|basımda|yayımlanmak\\s+üzere)";
+  var PAGE = "(?:\\s*,\\s*(?:p\\.|pp\\.|s\\.|ss\\.|para\\.|paras\\.)\\s*[\\d\\-\\u2013,\\s]+)?";
+
+  var NARRATIVE = new RegExp("(?<![\\p{L}])(?<authors>" + AUTHORS_NARR + ")\\s*\\((?<year>" + YEAR + ")" + PAGE + "\\)", "gu");
+  var MULTI_INNER = new RegExp("(?<authors>" + AUTHORS_PAREN + ")\\s*,\\s*(?<year>" + YEAR + ")", "u");
+  var PAREN_BLOCK = new RegExp("\\(([^()]*(?:" + WB0 + "\\d{4}[a-z]?" + WB1 +
+    "|n\\.\\s?d\\.|t\\.\\s?y\\.|in\\s+press|baskıda|basımda)[^()]*)\\)", "gu");
+  var SECONDARY = new RegExp(WB0 + "(?:as\\s+cited\\s+in|cited\\s+in|as\\s+quoted\\s+in|akt(?:aran)?\\s*[.:]?|" +
+    "citado\\s+(?:en|em|por)|apud|cité\\s+(?:par|dans)|zitiert\\s+nach)\\s+", "giu");
+  var NUMERIC = /\[\d{1,3}(?:\s*[,\-\u{2013}]\s*\d{1,3})*\]/gu;
+  var DOI_RE = /10\.\d{4,9}\/[^\s,;]+/i;
+  var YEAR_IN_PARENS = new RegExp("\\((" + YEAR + ")(?:\\s*,[^()]{0,40})?\\)", "iu");
+  var YEAR_BARE = /(?<!\d)(?:19|20)\d{2}[a-z]?(?![\p{L}\d])/u;
+  var ETAL_RE = new RegExp(ETAL, "gu");
+  var ETAL_TEST = new RegExp(ETAL, "iu");
+  var POSS_RE = new RegExp(APOS + "(?:ın|in|un|ün|nın|nin|nun|nün|a|e|ya|ye|da|de|ta|te|den|dan|ki|s)" + WB1, "gu");
+  var FIRST_SPLIT = new RegExp("\\s+" + CONJ + "\\s+|\\s*,\\s*", "u");
+  var APOS_G = new RegExp(APOS, "gu");
+
+  var NON_AUTHOR = new Set(("Birincisi İkincisi Üçüncüsü Dördüncüsü Beşincisi Altıncısı Yedincisi Sekizincisi " +
+    "Ayrıca Ancak Fakat Lakin Yani Çünkü Öyleyse Örneğin Mesela Şekil Tablo Bölüm Kısım Madde " +
+    "Figure Table Section Chapter Part Appendix Bu Şu Bunun Şunun Bunlar Şunlar Sonuç Sonuçta Özet Genel " +
+    "Nitekim Dolayısıyla Böylece Özellikle Benzer Oysa Sonra Önce Daha Diğer Yine Hatta Zira Buna " +
+    "Öte Aynı Bununla Halbuki Kısaca Özetle Bkz Örn " +
+    "However Moreover Furthermore Additionally Similarly Likewise Thus Therefore Hence Also Indeed Notably " +
+    "Recently Later Earlier Subsequently Conversely Meanwhile While Although Whereas Since Because Both See " +
+    "Following Unlike Like Then Yet Still Finally First Second Third In As And But Per Cf").split(" "));
+
+  // ---------- Soyad normalizasyonu (names.py) ----------
+  var SPECIAL = { "ı": "i", "İ": "i", "ß": "ss", "ø": "o", "Ø": "o", "ł": "l", "Ł": "l", "đ": "d", "Đ": "d",
+    "ð": "d", "Ð": "d", "þ": "th", "Þ": "th", "æ": "ae", "Æ": "ae", "œ": "oe", "Œ": "oe", "ħ": "h", "Ħ": "h" };
+  var PARTICLES = new Set(("de del della dello dei degli delle di da das do dos du des d la le les lo los las l y e i " +
+    "van von vom zu zum zur der den het ten ter te af av of al el bin ibn ben bint abu ebu").split(" "));
+
+  function fold(text) {
+    if (!text) return "";
+    var s = "";
+    for (var ch of text) s += (SPECIAL[ch] !== undefined ? SPECIAL[ch] : ch);
+    return s.normalize("NFKD").replace(/\p{M}/gu, "").toLowerCase();
+  }
+  function allTokens(surname) {
+    var s = fold(surname);
+    s = s.replace(/(?<![a-z0-9])([dl])['\u{2019}\u{2018}\u{2BC}\u{2B9}`\xB4]/gu, "$1 ");
+    s = s.replace(/['\u{2019}\u{2018}\u{2BC}\u{2B9}`\xB4]/gu, "");
+    return s.split(/[\s\-\u{2010}-\u{2014}.,]+/u).filter(Boolean);
+  }
+  function surnameTokens(surname) {
+    var toks = allTokens(surname);
+    var core = toks.filter(function (t) { return !PARTICLES.has(t); });
+    return core.length ? core : toks;
+  }
+  function editLe1(a, b) {
+    if (a === b) return true;
+    if (Math.abs(a.length - b.length) > 1) return false;
+    if (a.length > b.length) { var t = a; a = b; b = t; }
+    var i = 0, j = 0, diff = 0;
+    while (i < a.length && j < b.length) {
+      if (a[i] === b[j]) { i++; j++; continue; }
+      if (++diff > 1) return false;
+      if (a.length === b.length) i++;
+      j++;
+    }
+    return true;
+  }
+  function matchSurnames(a, b) {
+    if (!a || !b) return null;
+    var ta = surnameTokens(a), tb = surnameTokens(b);
+    if (!ta.length || !tb.length) return null;
+    if (ta.join(" ") === tb.join(" ")) return "exact";
+    var sa = new Set(ta), sb = new Set(tb);
+    var aInB = ta.every(function (t) { return sb.has(t); }), bInA = tb.every(function (t) { return sa.has(t); });
+    if (aInB || bInA) return "variant";
+    if (allTokens(a).join("") === allTokens(b).join("") || ta.join("") === tb.join("")) return "variant";
+    var ca = ta.join(""), cb = tb.join("");
+    if (Math.min(ca.length, cb.length) >= 5 && editLe1(ca, cb)) return "typo";
+    if (ta.length === tb.length && ta.length > 1) {
+      var diffs = [];
+      for (var i = 0; i < ta.length; i++) if (ta[i] !== tb[i]) diffs.push([ta[i], tb[i]]);
+      if (diffs.length === 1 && Math.min(diffs[0][0].length, diffs[0][1].length) >= 5 && editLe1(diffs[0][0], diffs[0][1])) return "typo";
+    }
+    return null;
+  }
+  function sortKey(surname) { return allTokens(surname || "").join(""); }
+
+  // ---------- Metin hazırlığı ----------
+  function normalizeWhitespace(text) {
+    text = text.replace(/\r\n?/g, "\n").replace(/\xAD/g, "").replace(/[^\S\r\n\t]/g, " ");
+    text = text.replace(/(\p{L})-\n(\p{L})/gu, "$1$2");
+    text = text.replace(/(?<=[\p{Ll},])\n(?=\p{Ll})/gu, " ");
+    return text;
+  }
+
+  var HEADING = new RegExp("^[\\s*#>0-9.)\\-]*(references?|reference\\s*list|works\\s+cited|bibliography|" +
+    "kaynak(?:ça|ca|lar)|kaynaklar\\s*ve\\s*ek(?:ler)?|referencias(?:\\s+bibliogr[aá]ficas)?|" +
+    "refer[eê]ncias(?:\\s+bibliogr[aá]ficas)?|bibliograf[ií]a|obras\\s+citadas|" +
+    "r[eé]f[eé]rences(?:\\s+bibliographiques)?|bibliographie|riferimenti(?:\\s+bibliografici)?|" +
+    "literatur(?:verzeichnis)?)[ \\t]*[:.]?[ \\t]*$", "gimu");
+
+  function splitBodyAndReferences(text) {
+    if (!text) return { body: "", refs: "" };
+    text = text.replace(/\r\n?/g, "\n");
+    var last = null, m;
+    HEADING.lastIndex = 0;
+    while ((m = HEADING.exec(text)) !== null) { last = m; if (m[0].length === 0) HEADING.lastIndex++; }
+    if (!last) return { body: text, refs: "" };
+    return { body: text.slice(0, last.index).replace(/\s+$/, ""), refs: text.slice(last.index + last[0].length).replace(/^\s+/, "") };
+  }
+
+  // ---------- Atıf çıkarımı ----------
+  function citationSurname(authors) {
+    var cleaned = authors.replace(ETAL_RE, "").trim().replace(POSS_RE, "");
+    return cleaned.split(FIRST_SPLIT)[0].trim();
+  }
+  function makeCitation(raw, authors, year, type, position) {
+    var surname = citationSurname(authors);
+    return { raw: raw, authors: authors, year: year.replace(/\s+/g, " "), type: type, position: position,
+      surname: surname, key: surname.replace(APOS_G, "'").toLowerCase() + "|" + year };
+  }
+  var STARTS_NAME = new RegExp("^(?:" + U + "|" + CORE_PREFIX + ")", "u");
+
+  function extractCitations(body) {
+    body = normalizeWhitespace(body || "");
+    var out = [], spans = [], block, m;
+    PAREN_BLOCK.lastIndex = 0;
+    while ((block = PAREN_BLOCK.exec(body)) !== null) {
+      var inner = block[1];
+      spans.push([block.index, block.index + block[0].length]);
+      var sec = null, s;
+      SECONDARY.lastIndex = 0;
+      while ((s = SECONDARY.exec(inner)) !== null) sec = s;
+      if (sec) inner = inner.slice(sec.index + sec[0].length);
+      var parts = inner.split(/\s*;\s*/);
+      for (var p = 0; p < parts.length; p++) {
+        var part = parts[p].trim();
+        var im = MULTI_INNER.exec(part);
+        if (!im) continue;
+        out.push(makeCitation(parts.length > 1 ? "(" + part + ")" : block[0], im.groups.authors.trim(), im.groups.year, "parenthetical", block.index));
+      }
+    }
+    NARRATIVE.lastIndex = 0;
+    while ((m = NARRATIVE.exec(body)) !== null) {
+      var start = m.index;
+      if (spans.some(function (sp) { return sp[0] <= start && start < sp[1]; })) continue;
+      if (start > 0 && body[start - 1] === "(") continue;
+      var authors = m.groups.authors.trim();
+      for (;;) {
+        var mm = /^([^\s,]+)[\s,]*([\s\S]*)$/.exec(authors);
+        if (!mm || !NON_AUTHOR.has(mm[1])) break;
+        authors = mm[2].trim();
+        if (!authors) break;
+      }
+      if (!authors || !STARTS_NAME.test(authors)) continue;
+      out.push(makeCitation(m[0], authors, m.groups.year, "narrative", start));
+    }
+    out.sort(function (a, b) { return a.position - b.position; });
+    return out;
+  }
+
+  function detectNumericStyle(body, authorDateCount) {
+    var n = ((body || "").match(NUMERIC) || []).length;
+    return n >= 5 && n > 2 * (authorDateCount || 0);
+  }
+
+  // ---------- Kaynakça ----------
+  var WORD = CORE_PREFIX + "?" + U + "[" + L + U + HYPH + "]*" + APOS + "?[" + L + U + HYPH + "]+";
+  var AUTHOR_START = "(?:" + PREFIXES + ")?" + WORD + "(?:\\s+(?:(?:" + PREFIXES + ")|(?:[ye]\\s+))?" + WORD + "){0,4}\\s*,\\s*" + U + "\\.";
+  var ORG_START = ACRONYM + "(?:\\s*[,(&]|\\s+" + U + ")";
+  var ENTRY_SPLIT = new RegExp("\\n(?=" + AUTHOR_START + "|" + ORG_START + ")", "u");
+  var LINE_YEAR = /\(\d{4}[a-z]?\)|\((?:n\.d\.|t\.y\.)\)/;
+  var ANY_YEAR = /\(\d{4}[a-z]?\)|(?<![\p{L}\d])(?:19|20)\d{2}(?![\p{L}\d])/u;
+  var REF_APA = new RegExp("^((?:" + PREFIXES + ")?" + AUTHOR_CORE + "(?:[\\s" + HYPH + "](?:(?:" + PREFIXES + ")|(?:[ye]\\s+))?" +
+    AUTHOR_CORE + "){0,4})\\s*,\\s*" + U + "\\.", "u");
+  var REF_ORG = new RegExp("^(" + ORG + ")(?:\\s*[,(.]|\\s*$)", "u");
+
+  function splitReferenceEntries(refsText) {
+    refsText = (refsText || "").replace(/\r\n?/g, "\n").trim();
+    if (!refsText) return [];
+    var blocks = refsText.split(/\n\s*\n/);
+    var rawLines = refsText.split("\n").map(function (l) { return l.trim(); }).filter(function (l) { return l.length > 20; });
+    var candidates;
+    var clean = function (x) { return x.replace(/\n/g, " ").trim(); };
+    if (blocks.length > 3) {
+      candidates = blocks.filter(function (b) { return b.trim().length > 20; }).map(clean);
+    } else if (rawLines.length >= 2 && rawLines.filter(function (l) { return LINE_YEAR.test(l.slice(0, 300)); }).length >= 0.85 * rawLines.length) {
+      candidates = rawLines;
+    } else {
+      candidates = refsText.split(ENTRY_SPLIT).filter(function (l) { return l.trim().length > 20; }).map(clean);
+    }
+    var merged = [];
+    candidates.forEach(function (c) {
+      if (!ANY_YEAR.test(c) && merged.length) merged[merged.length - 1] += " " + c; else merged.push(c);
+    });
+    return merged;
+  }
+
+  function referenceSurname(authorsRaw) {
+    if (!authorsRaw) return null;
+    var first = authorsRaw.trim().split(/\s*&\s*|\s+and\s+|\s+ve\s+|;/)[0].trim().replace(/[,. ]+$/, "").trim();
+    var m = REF_APA.exec(first);
+    if (m) return m[1].trim();
+    m = REF_ORG.exec(first);
+    if (m) return m[1].trim();
+    return first.split(",")[0].replace(/^[ .]+|[ .]+$/g, "");
+  }
+
+  function extractReferences(refsText) {
+    return splitReferenceEntries(refsText).map(function (entry, idx) {
+      var ref = { index: idx + 1, raw: entry, authorsRaw: null, year: null, title: null, doi: null, surname: null,
+        status: "unchecked", score: 0, match: null, provider: null };
+      var d = DOI_RE.exec(entry);
+      if (d) ref.doi = d[0].replace(/[.,;)\]]+$/, "");
+      var ym = YEAR_IN_PARENS.exec(entry);
+      if (ym) {
+        ref.year = ym[1].replace(/\s+/g, " ");
+        ref.authorsRaw = entry.slice(0, ym.index).trim().replace(/[.,]+$/, "");
+        var after = entry.slice(ym.index + ym[0].length).trim().replace(/^\.+/, "").trim();
+        var tm = /^([^.]+)\./.exec(after);
+        if (tm) ref.title = tm[1].trim();
+      } else {
+        var y2 = YEAR_BARE.exec(entry);
+        if (y2) { ref.year = y2[0]; ref.authorsRaw = entry.slice(0, y2.index).trim().replace(/[.,]+$/, ""); }
+      }
+      ref.surname = referenceSurname(ref.authorsRaw);
+      if (!ref.surname && ref.year) {
+        var fm = new RegExp(U + L + "+", "u").exec(entry);
+        ref.surname = fm ? fm[0] : null;
+      }
+      return ref;
+    });
+  }
+
+  // ---------- Çapraz kontrol ----------
+  var YEAR_ALIASES = { "t.y.": "n.d.", "t. y.": "n.d.", "n. d.": "n.d.", "baskıda": "in press", "basımda": "in press", "yayımlanmak üzere": "in press" };
+  function normYear(y) { y = (y || "").trim().toLowerCase().replace(/\s+/g, " "); return YEAR_ALIASES[y] || y; }
+  function yearBase(y) { y = normYear(y); return /^\d{4}/.test(y) ? y.slice(0, 4) : y; }
+
+  function crossCheck(citations, references) {
+    var cited = new Set(), missing = [], fuzzy = [], matchedKeys = new Set(), seen = new Set(), seenFuzzy = new Set();
+    citations.forEach(function (cit) {
+      if (!cit.key) return;
+      var hits = { exact: [], variant: [], typo: [] };
+      references.forEach(function (ref, idx) {
+        if (!ref.surname || !ref.year) return;
+        var level;
+        if (normYear(ref.year) !== normYear(cit.year)) {
+          if (yearBase(ref.year) !== yearBase(cit.year)) return;
+          level = matchSurnames(cit.surname, ref.surname);
+          if (level) hits[level === "exact" ? "variant" : level].push(idx);
+          return;
+        }
+        level = matchSurnames(cit.surname, ref.surname);
+        if (level) hits[level].push(idx);
+      });
+      var chosen = hits.exact.length ? "exact" : hits.variant.length ? "variant" : hits.typo.length ? "typo" : null;
+      if (!chosen) { if (!seen.has(cit.key)) { missing.push(cit); seen.add(cit.key); } return; }
+      seen.add(cit.key); matchedKeys.add(cit.key);
+      hits[chosen].forEach(function (idx) {
+        cited.add(idx);
+        if (chosen !== "exact") {
+          var fk = cit.key + "#" + idx;
+          if (!seenFuzzy.has(fk)) { seenFuzzy.add(fk); fuzzy.push({ citation: cit, reference: references[idx], kind: chosen }); }
+        }
+      });
+    });
+    var orphans = references.filter(function (ref, idx) { return ref.surname && ref.year && !cited.has(idx); });
+    return { missing: missing, orphans: orphans, matchedCount: matchedKeys.size, fuzzy: fuzzy };
+  }
+
+  // ---------- APA biçim denetimleri ----------
+  var COUNT_SPLIT = /\s*,\s*(?:(?:&|and|ve|y|e|et|und)\s+)?|\s+(?:&|and|ve|y|e|et|und)\s+/u;
+  function countAuthors(authors) {
+    return authors.replace(ETAL_RE, "").split(COUNT_SPLIT).filter(function (p) { return p && /[\p{L}\p{N}]/u.test(p); }).length;
+  }
+  function checkFormat(citations, references) {
+    var issues = [], seenEtal = new Set();
+    citations.forEach(function (c) {
+      if (countAuthors(c.authors) >= 3 && !ETAL_TEST.test(c.authors) && !seenEtal.has(c.raw)) {
+        seenEtal.add(c.raw);
+        issues.push({ code: "etal", excerpt: c.raw, a: c.surname, b: c.year });
+      }
+    });
+    for (var i = 1; i < references.length; i++) {
+      var prev = sortKey(references[i - 1].surname), cur = sortKey(references[i].surname);
+      if (prev && cur && prev > cur) issues.push({ code: "alpha", excerpt: references[i].raw.slice(0, 120), a: references[i].surname, b: references[i - 1].surname });
+    }
+    var seenRef = new Map();
+    references.forEach(function (r) {
+      if (/\bdoi:\s*10\.\d/i.test(r.raw) || /https?:\/\/dx\.doi\.org\//i.test(r.raw) || (r.doi && !/https?:\/\/doi\.org\/10\./i.test(r.raw)))
+        issues.push({ code: "doi", excerpt: r.raw.slice(0, 120), a: r.doi || "" });
+      if (!r.year) issues.push({ code: "noyear", excerpt: r.raw.slice(0, 120) });
+      if (r.surname && r.year) {
+        var k = surnameTokens(r.surname).join(" ") + "|" + normYear(r.year) + "|" + fold(r.title || "").slice(0, 40);
+        if (seenRef.has(k)) issues.push({ code: "dup", excerpt: r.raw.slice(0, 120), a: String(seenRef.get(k)), b: String(r.index) });
+        else seenRef.set(k, r.index);
+      }
+    });
+    return issues;
+  }
+
+  // ---------- Veritabanı doğrulaması ----------
+  var STOP = new Set(("the a an of and in on for to with by from at as is are its ve ile bir bu icin de da olarak uzerine " +
+    "el la los las del y en un una e o do dos das um uma em le les des du et une der die das und").split(" "));
+  function words(text) { return fold(text || "").match(/[a-z0-9]+/g) || []; }
+  function titleCoverage(ref, cand) {
+    var cw = words(cand.title).filter(function (w) { return !STOP.has(w) && w.length > 2; });
+    if (cw.length < 2) return null;
+    var rw = new Set(words(ref.raw));
+    return cw.filter(function (w) { return rw.has(w); }).length / cw.length;
+  }
+  function firstAuthorPresent(ref, cand) {
+    var authors = cand.authors || [];
+    if (!authors.length) return null;
+    var first = authors[0], parts = first.trim().split(/\s+/);
+    var surname = first.indexOf(",") >= 0 ? first.split(",")[0] : parts[parts.length - 1] || "";
+    var toks = surnameTokens(surname);
+    if (!toks.length) return null;
+    var rw = new Set(words(ref.raw));
+    return toks.some(function (t) { return rw.has(t); });
+  }
+  function doiRecordMatches(ref, cand) {
+    var cov = titleCoverage(ref, cand), au = firstAuthorPresent(ref, cand);
+    if (cov === null) return au !== false;
+    if (cov >= 0.6) return true;
+    return cov >= 0.4 && au === true;
+  }
+  function scoreCandidate(ref, cand) {
+    var cov = titleCoverage(ref, cand), au = firstAuthorPresent(ref, cand);
+    var yearOk = !ref.year || !cand.year || ref.year.slice(0, 4) === String(cand.year).slice(0, 4);
+    var score = 100 * (0.7 * (cov === null ? 0.5 : cov) + 0.18 * (au === false ? 0 : 1) + 0.12 * (yearOk ? 1 : 0));
+    var status = "not_found";
+    if (cov !== null && cov >= 0.8 && au !== false && yearOk) status = "verified";
+    else if (cov !== null && cov >= 0.5 && (au !== false || yearOk)) status = "low_confidence";
+    else if (cov === null && au === true && yearOk) status = "low_confidence";
+    return { score: Math.round(score * 10) / 10, status: status };
+  }
+  function cleanDoi(doi) {
+    return (doi || "").trim().replace(/^(?:https?:\/\/(?:dx\.)?doi\.org\/|doi:\s*)/i, "").replace(/[.,;)\]]+$/, "");
+  }
+  function normCrossref(it) {
+    var pub = it.published || it["published-print"] || it["published-online"] || it.issued || {};
+    var dp = (pub["date-parts"] || [[]])[0] || [];
+    return { title: (it.title || [""])[0] || "", year: dp[0] ? String(dp[0]) : null, doi: it.DOI || null,
+      container: (it["container-title"] || [null])[0], source: "crossref",
+      authors: (it.author || []).filter(function (a) { return a.family; }).map(function (a) { return a.family + (a.given ? ", " + a.given : ""); }),
+      url: it.URL || (it.DOI ? "https://doi.org/" + it.DOI : null) };
+  }
+  function normOpenAlex(it) {
+    var doi = it.doi || null;
+    return { title: it.title || it.display_name || "", year: it.publication_year ? String(it.publication_year) : null,
+      doi: doi ? doi.replace(/^https?:\/\/doi\.org\//i, "") : null, source: "openalex",
+      container: (((it.primary_location || {}).source) || {}).display_name || null,
+      authors: (it.authorships || []).map(function (a) { return (a.author || {}).display_name; }).filter(Boolean), url: doi || it.id || null };
+  }
+
+  /* fetchJson(url) -> Promise<{status:number, data:object|null}>; ağ hatasında reddeder. */
+  async function validateReference(ref, fetchJson) {
+    var best = null, errors = 0, mismatch = null;
+    var consider = function (cand, provider) {
+      var r = scoreCandidate(ref, cand);
+      if (!best || r.score > best.score) best = { status: r.status, score: r.score, match: cand, provider: provider };
+    };
+    if (ref.doi) {
+      try {
+        var res = await fetchJson("https://api.crossref.org/works/" + encodeURIComponent(cleanDoi(ref.doi)).replace(/%2F/gi, "/"));
+        if (res.status === 200 && res.data && res.data.message) {
+          var c = normCrossref(res.data.message);
+          if (doiRecordMatches(ref, c)) return { status: "verified", score: 100, match: c, provider: "crossref" };
+          mismatch = { status: "doi_mismatch", score: scoreCandidate(ref, c).score, match: c, provider: "crossref" };
+        } else if (res.status === 404) {
+          ref.doiUnresolved = true;
+        }
+      } catch (e) { errors++; }
+    }
+    var q = encodeURIComponent(ref.raw.slice(0, 400));
+    var providers = [
+      ["crossref", "https://api.crossref.org/works?rows=3&select=title,author,published,issued,container-title,DOI,URL&query.bibliographic=" + q,
+        function (d) { return ((d.message || {}).items || []).map(normCrossref); }],
+      ["openalex", "https://api.openalex.org/works?per_page=3&search=" + encodeURIComponent(((ref.title || ref.raw).replace(/[^\p{L}\p{N}\s]/gu, " ")).slice(0, 250)),
+        function (d) { return (d.results || []).map(normOpenAlex); }]
+    ];
+    for (var i = 0; i < providers.length; i++) {
+      try {
+        var r2 = await fetchJson(providers[i][1]);
+        if (r2.status !== 200 || !r2.data) { if (r2.status !== 404) errors++; continue; }
+        providers[i][2](r2.data).forEach(function (cand) { consider(cand, providers[i][0]); });
+        if (best && best.status === "verified") break;
+      } catch (e) { errors++; }
+    }
+    if (best && best.status === "verified") return best;       // DOI yanlış yazılmış, kaynak gerçek
+    if (mismatch) return mismatch;
+    if (best && best.status !== "not_found") return best;
+    if (errors >= providers.length) return { status: "error", score: 0, match: null, provider: null };
+    return { status: "not_found", score: best ? best.score : 0, match: best ? best.match : null, provider: null };
+  }
+
+  async function validateAll(references, fetchJson, onProgress, concurrency) {
+    var next = 0, done = 0, total = references.length;
+    async function worker() {
+      while (next < total) {
+        var ref = references[next++];
+        var r;
+        try { r = await validateReference(ref, fetchJson); } catch (e) { r = { status: "error", score: 0, match: null, provider: null }; }
+        ref.status = r.status; ref.score = r.score; ref.match = r.match; ref.provider = r.provider;
+        done++;
+        if (onProgress) onProgress(done, total);
+      }
+    }
+    var ws = [];
+    for (var i = 0; i < Math.min(concurrency || 4, total); i++) ws.push(worker());
+    await Promise.all(ws);
+    return references;
+  }
+
+  function analyze(text) {
+    var parts = splitBodyAndReferences(text);
+    var citations = extractCitations(parts.body);
+    var references = extractReferences(parts.refs);
+    return { body: parts.body, refsText: parts.refs, citations: citations, references: references,
+      cross: crossCheck(citations, references), format: checkFormat(citations, references),
+      numericStyle: detectNumericStyle(parts.body, citations.length) };
+  }
+
+  function toCsv(rows) {
+    return String.fromCharCode(0xFEFF) + rows.map(function (r) {
+      return r.map(function (v) { v = v === null || v === undefined ? "" : String(v); return /[",\n;]/.test(v) ? '"' + v.replace(/"/g, '""') + '"' : v; }).join(",");
+    }).join("\r\n");
+  }
+
+  return { fold: fold, surnameTokens: surnameTokens, matchSurnames: matchSurnames, sortKey: sortKey,
+    splitBodyAndReferences: splitBodyAndReferences, extractCitations: extractCitations, extractReferences: extractReferences,
+    crossCheck: crossCheck, checkFormat: checkFormat, countAuthors: countAuthors, detectNumericStyle: detectNumericStyle,
+    titleCoverage: titleCoverage, firstAuthorPresent: firstAuthorPresent, doiRecordMatches: doiRecordMatches,
+    scoreCandidate: scoreCandidate, validateReference: validateReference, validateAll: validateAll, cleanDoi: cleanDoi,
+    analyze: analyze, toCsv: toCsv };
+})();
+
+/* ---------- Dosya okuma (DOCX: harici kütüphane gerekmez) ---------- */
+CitationCheck.docxXmlToText = function (xml) {
+  "use strict";
+  var out = [], re = /<w:p[\s>][\s\S]*?<\/w:p>/g, m;
+  var decode = function (s) {
+    // Not: kaynakta HTML varlığı (entity) yazılmaz; x26 = "ve" işareti. WordPress'in
+    // kaydederken yaptığı karakter dönüşümlerinden etkilenmemek için.
+    return s.replace(/\x26lt;/g, "<").replace(/\x26gt;/g, ">").replace(/\x26quot;/g, '"').replace(/\x26apos;/g, "'")
+      .replace(/\x26#(\d+);/g, function (_, n) { return String.fromCodePoint(+n); })
+      .replace(/\x26#x([0-9a-f]+);/gi, function (_, n) { return String.fromCodePoint(parseInt(n, 16)); }).replace(/\x26amp;/g, "\x26");
+  };
+  while ((m = re.exec(xml)) !== null) {
+    var t = "", tok, tre = /<w:t(?:\s[^>]*)?>([\s\S]*?)<\/w:t>|<w:tab\s*\/>|<w:br\s*\/>|<w:cr\s*\/>|<w:noBreakHyphen\s*\/>/g;
+    while ((tok = tre.exec(m[0])) !== null) {
+      if (tok[1] !== undefined) t += decode(tok[1]);
+      else if (tok[0].indexOf("w:tab") > 0) t += "\t";
+      else if (tok[0].indexOf("Hyphen") > 0) t += "-";
+      else t += " ";
+    }
+    t = t.trim();
+    if (t) out.push(t);
+  }
+  return out;
+};
+
+CitationCheck.readZipEntries = async function (buffer, wanted) {
+  "use strict";
+  var dv = new DataView(buffer), u8 = new Uint8Array(buffer), n = u8.length, eocd = -1;
+  for (var i = n - 22; i >= Math.max(0, n - 65557); i--) if (dv.getUint32(i, true) === 0x06054b50) { eocd = i; break; }
+  if (eocd < 0) throw new Error("zip");
+  var count = dv.getUint16(eocd + 10, true), off = dv.getUint32(eocd + 16, true), res = {}, td = new TextDecoder("utf-8");
+  for (var k = 0; k < count; k++) {
+    if (dv.getUint32(off, true) !== 0x02014b50) break;
+    var method = dv.getUint16(off + 10, true), csize = dv.getUint32(off + 20, true);
+    var nl = dv.getUint16(off + 28, true), el = dv.getUint16(off + 30, true), cl = dv.getUint16(off + 32, true), lho = dv.getUint32(off + 42, true);
+    var name = td.decode(u8.subarray(off + 46, off + 46 + nl));
+    if (wanted.indexOf(name) >= 0) {
+      var lnl = dv.getUint16(lho + 26, true), lel = dv.getUint16(lho + 28, true), start = lho + 30 + lnl + lel;
+      var data = u8.subarray(start, start + csize);
+      if (method === 8) {
+        var stream = new Blob([data]).stream().pipeThrough(new DecompressionStream("deflate-raw"));
+        data = new Uint8Array(await new Response(stream).arrayBuffer());
+      } else if (method !== 0) throw new Error("zip-method");
+      res[name] = td.decode(data);
+    }
+    off += 46 + nl + el + cl;
+  }
+  return res;
+};
+
+CitationCheck.docxToText = async function (buffer) {
+  "use strict";
+  var files = await CitationCheck.readZipEntries(buffer, ["word/document.xml", "word/footnotes.xml", "word/endnotes.xml"]);
+  if (!files["word/document.xml"]) throw new Error("docx");
+  var lines = CitationCheck.docxXmlToText(files["word/document.xml"]), notes = [];
+  ["word/footnotes.xml", "word/endnotes.xml"].forEach(function (f) { if (files[f]) notes = notes.concat(CitationCheck.docxXmlToText(files[f])); });
+  if (notes.length) {
+    var at = -1;
+    for (var i = lines.length - 1; i >= 0; i--) if (CitationCheck.splitBodyAndReferences("x\n" + lines[i] + "\ny").refs === "y") { at = i; break; }
+    if (at < 0) lines = lines.concat(notes); else lines = lines.slice(0, at).concat(notes, lines.slice(at));
+  }
+  return lines.join("\n");
+};
+
+/* citationcheck: arayüz. #ccx kökü altında çalışır; core.js sonrasında yüklenir. */
+(function () {
+  "use strict";
+  var CC = CitationCheck, root = document.getElementById("ccx");
+  if (!root) return;
+  var PDFJS = "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/4.10.38/";
+  var MAX_MB = 25, MAX_VALIDATE = 300;
+  var lang = "en"; try { if (localStorage.getItem("ccx-lang") === "tr") lang = "tr"; } catch (e) {}
+  var state = { result: null, tab: "cross", validated: false, busy: false };
+
+  var T = {
+    tr: {
+      kicker: "Araç · Akademik yazım", title: "Atıf ve Kaynakça Denetleyici",
+      lede: "Makalenizi yapıştırın ya da yükleyin. Metin içi atıflar ile kaynakça karşılaştırılır; eksik, yetim ve tutarsız yazılmış kaynaklar saniyeler içinde listelenir.",
+      paste: "Makale metni (kaynakça dahil)", ph: "Metninizi buraya yapıştırın. Kaynakça bölümü kendi satırında “Kaynakça” ya da “References” başlığıyla başlamalıdır.",
+      upload: "Dosya yükle (DOCX, PDF, TXT)", sample: "Örnek metin", analyze: "Denetle", clear: "Temizle",
+      privacy: "Metniniz tarayıcınızdan çıkmaz; hiçbir sunucuya yüklenmez. Yalnızca “Veritabanında doğrula” düğmesine basarsanız kaynakça satırları CrossRef ve OpenAlex'e sorgu olarak gönderilir.",
+      reading: "Dosya okunuyor…", tooBig: "Dosya çok büyük (en fazla " + MAX_MB + " MB).", badFile: "Dosya okunamadı. DOCX ya da TXT deneyin veya metni yapıştırın.",
+      pdfFail: "PDF okunamadı. Taranmış (görüntü) PDF olabilir; DOCX yükleyin ya da metni yapıştırın.", noType: "Desteklenmeyen dosya türü. DOCX, PDF ya da TXT yükleyin.",
+      empty: "Önce bir metin yapıştırın ya da dosya yükleyin.",
+      noRefs: "Kaynakça bölümü bulunamadı. Kaynakçanın başına, kendi satırında “Kaynakça” ya da “References” başlığı ekleyin.",
+      numeric: "Bu metin numaralı atıf sistemi (Vancouver / IEEE: [1], [2-4]) kullanıyor görünüyor. Bu araç yazar-tarih (APA) atıflarını denetler; numaralı atıflarda metin-kaynakça eşleştirmesi yapılmaz.",
+      mCit: "Metin içi atıf", mRef: "Kaynak", mMiss: "Kaynakçada yok", mOrph: "Metinde atıf yok", mFuzzy: "Yazım tutarsız",
+      tCross: "Çapraz kontrol", tCit: "Atıflar", tRef: "Kaynaklar", tFmt: "Biçim",
+      hMiss: "Metinde var, kaynakçada yok", hOrph: "Kaynakçada var, metinde atıf yok", hFuzzy: "Eşleşti, ancak soyad yazımı tutarsız",
+      okMiss: "Tüm atıfların kaynağı kaynakçada mevcut.", okOrph: "Tüm kaynaklara metinde atıf yapılmış.",
+      fuzzyNote: "Bu atıflar kaynakçadaki kayıtla eşleştirildi, ancak soyad iki yerde farklı yazılmış. Metin ile kaynakçayı aynı biçime getirin.",
+      variant: "farklı yazım", typo: "olası yazım hatası", inRefs: "kaynakçada",
+      cRaw: "Atıf", cAuth: "Yazar(lar)", cYear: "Yıl", cType: "Tür", cMatch: "Kaynakçada", paren: "parantez içi", narr: "anlatımsal", yes: "var", no: "yok",
+      rNo: "#", rRef: "Kaynak", rAuth: "İlk yazar", rYear: "Yıl", rCited: "Atıf", rStatus: "Veritabanı", rFound: "Bulunan kayıt",
+      validate: "Veritabanında doğrula (CrossRef + OpenAlex)", validating: "Doğrulanıyor", validateNote: "Kaynakların gerçekten var olup olmadığını sorgular. Kaynakça satırları CrossRef ve OpenAlex'e gönderilir.",
+      capped: "Yalnızca ilk " + MAX_VALIDATE + " kaynak doğrulandı.",
+      s_verified: "Doğrulandı", s_low_confidence: "Düşük güven", s_not_found: "Bulunamadı", s_doi_mismatch: "DOI başka yayına ait", s_error: "Sorgulanamadı", s_unchecked: "-",
+      vSum: "doğrulandı", vLow: "düşük güven", vNot: "bulunamadı", vDoi: "DOI uyuşmazlığı", vErr: "sorgulanamadı",
+      doiWarn: "Dikkat: aşağıdaki kaynaklarda DOI gerçek, ancak başka bir yayına ait. Uydurma kaynaklarda sık görülür.",
+      notFoundWarn: "“Bulunamadı” kaynağın uydurma olduğunu kanıtlamaz: kitaplar, tezler, raporlar ve Türkçe dergilerin bir bölümü bu veritabanlarında yer almaz. Bu kaynakları elle kontrol edin.",
+      f_etal: "APA 7: üç ve daha fazla yazarlı kaynakta ilk atıftan itibaren “et al.” (Türkçede “vd.”) kullanılır.",
+      f_alpha: "Kaynakça alfabetik sırada değil: “{a}”, “{b}” kaydından önce gelmeli.",
+      f_doi: "DOI biçimi: APA 7'de DOI “https://doi.org/…” biçiminde yazılır.", f_noyear: "Bu kaynakta yıl bulunamadı.",
+      f_dup: "Aynı kaynak iki kez listelenmiş görünüyor (#{a} ve #{b}).", okFmt: "Biçim sorunu saptanmadı.",
+      csvCit: "Atıfları indir (CSV)", csvRef: "Kaynakları indir (CSV)", none: "Kayıt yok.",
+      limits: "Sınırlar: yazar-tarih (APA) atıfları denetlenir; yalnızca ilk yazar karşılaştırılır; taranmış PDF'lerde metin okunamaz.",
+      credit: "Hazırlayan: Prof. Dr. Mehmet Nurullah Kurutkan, Düzce Üniversitesi İşletme Fakültesi Sağlık Yönetimi Bölümü", source: "Açık kaynak kod"
+    },
+    en: {
+      kicker: "Tool · Academic writing", title: "Citation and Reference Checker",
+      lede: "Paste or upload your manuscript. In-text citations are compared with the reference list; missing, uncited and inconsistently spelled sources are listed in seconds.",
+      paste: "Manuscript text (including the reference list)", ph: "Paste your text here. The reference list must start with a “References” heading on its own line.",
+      upload: "Upload a file (DOCX, PDF, TXT)", sample: "Sample text", analyze: "Check", clear: "Clear",
+      privacy: "Your text never leaves your browser; nothing is uploaded to a server. Only if you press “Verify in databases” are the reference lines sent to CrossRef and OpenAlex as queries.",
+      reading: "Reading file…", tooBig: "File too large (max " + MAX_MB + " MB).", badFile: "The file could not be read. Try DOCX or TXT, or paste the text.",
+      pdfFail: "The PDF could not be read. It may be a scanned (image) PDF; upload a DOCX or paste the text.", noType: "Unsupported file type. Upload DOCX, PDF or TXT.",
+      empty: "Paste some text or upload a file first.",
+      noRefs: "No reference list found. Add a “References” heading on its own line above the list.",
+      numeric: "This text appears to use a numbered citation system (Vancouver / IEEE: [1], [2-4]). This tool checks author-date (APA) citations; numbered citations are not matched against the list.",
+      mCit: "In-text citations", mRef: "References", mMiss: "Missing from list", mOrph: "Never cited", mFuzzy: "Spelled differently",
+      tCross: "Cross-check", tCit: "Citations", tRef: "References", tFmt: "Format",
+      hMiss: "Cited in the text, missing from the reference list", hOrph: "In the reference list, never cited", hFuzzy: "Matched, but the surname is spelled differently",
+      okMiss: "Every citation has an entry in the reference list.", okOrph: "Every reference is cited in the text.",
+      fuzzyNote: "These citations were matched to a reference, but the surname is written differently in the two places. Make the text and the list consistent.",
+      variant: "different spelling", typo: "possible typo", inRefs: "in the list",
+      cRaw: "Citation", cAuth: "Author(s)", cYear: "Year", cType: "Type", cMatch: "In list", paren: "parenthetical", narr: "narrative", yes: "yes", no: "no",
+      rNo: "#", rRef: "Reference", rAuth: "First author", rYear: "Year", rCited: "Cited", rStatus: "Database", rFound: "Record found",
+      validate: "Verify in databases (CrossRef + OpenAlex)", validating: "Verifying", validateNote: "Checks whether each source really exists. Reference lines are sent to CrossRef and OpenAlex.",
+      capped: "Only the first " + MAX_VALIDATE + " references were verified.",
+      s_verified: "Verified", s_low_confidence: "Low confidence", s_not_found: "Not found", s_doi_mismatch: "DOI belongs to another work", s_error: "Could not query", s_unchecked: "-",
+      vSum: "verified", vLow: "low confidence", vNot: "not found", vDoi: "DOI mismatch", vErr: "could not query",
+      doiWarn: "Warning: in the references below the DOI is real but belongs to a different publication. This is common in fabricated references.",
+      notFoundWarn: "“Not found” does not prove a source is fabricated: books, theses, reports and many non-English journals are not in these databases. Check these sources by hand.",
+      f_etal: "APA 7: with three or more authors, use “et al.” from the first citation.",
+      f_alpha: "The list is not in alphabetical order: “{a}” should come before “{b}”.",
+      f_doi: "DOI format: APA 7 writes DOIs as “https://doi.org/…”.", f_noyear: "No year found in this reference.",
+      f_dup: "The same source appears to be listed twice (#{a} and #{b}).", okFmt: "No format problems found.",
+      csvCit: "Download citations (CSV)", csvRef: "Download references (CSV)", none: "No records.",
+      limits: "Limits: author-date (APA) citations only; only the first author is compared; text cannot be read from scanned PDFs.",
+      credit: "Prepared by Prof. Dr. Mehmet Nurullah Kurutkan, Düzce University, Faculty of Business, Department of Health Management", source: "Open source code"
+    }
+  };
+  function t(k, vars) {
+    var s = (T[lang] && T[lang][k]) || T.en[k] || k;
+    if (vars) Object.keys(vars).forEach(function (v) { s = s.split("{" + v + "}").join(vars[v]); });
+    return s;
+  }
+  var SAMPLE = "Sağlıkta eşitsizlik uzun süredir çalışılmaktadır (de Souza, 2020). García Márquez (2019) farklı bir sonuç bulmuştur. " +
+    "Benzer bulgular (van der Berg & Müller, 2018) ve (Dos Santos et al., 2021) tarafından da bildirilmiştir. " +
+    "Demir Yılmaz (2022) hemşireleri incelemiştir. Ancak Şahin (2017) buna karşı çıkar. Kaya (2023) çift soyadlı yazara tek soyadla atıf yapmaktadır. " +
+    "Bazı kaynaklar ise listede yoktur (Uydurma, 2021).\n\nKaynakça\n" +
+    "Aksoy Kaya, Z. (2023). Hemşirelikte iş yükü ve bakım kalitesi. Sağlık Yönetimi Dergisi, 5(1), 10-22.\n" +
+    "Demir-Yılmaz, A. (2022). Hemşirelerde tükenmişlik ve dayanıklılık. Hemşirelik Araştırmaları Dergisi, 8(3), 44-58.\n" +
+    "de Souza, A. B. (2020). Desigualdades em saúde no Brasil. Revista de Saúde Pública, 54(2), 30-41.\n" +
+    "dos Santos, M. A., Lima, P., & Rocha, T. (2021). Acesso aos serviços de saúde. Cadernos de Saúde Pública, 37(4), 1-12.\n" +
+    "García Márquez, G. (2019). Calidad de la atención hospitalaria. Gaceta Sanitaria, 33(5), 400-410.\n" +
+    "Öztürk, C. (2015). Hasta güvenliği kültürü. Sağlıkta Kalite Dergisi, 2(1), 1-9.\n" +
+    "Şahin, M. (2017). Sağlık politikalarında dönüşüm. Sağlık Politikaları Dergisi, 3(2), 15-27.\n" +
+    "van der Berg, J., & Müller, K. (2018). Patient safety in Dutch hospitals. BMJ Quality and Safety, 27(6), 500-509.";
+
+  function h(tag, attrs, kids) {
+    var el = document.createElement(tag);
+    if (attrs) Object.keys(attrs).forEach(function (k) {
+      var v = attrs[k];
+      if (v === null || v === undefined || v === false) return;
+      if (k === "class") el.className = v; else if (k === "text") el.textContent = v;
+      else if (k.slice(0, 2) === "on") el.addEventListener(k.slice(2), v); else el.setAttribute(k, v === true ? "" : v);
+    });
+    (kids || []).forEach(function (c) { if (c) el.appendChild(typeof c === "string" ? document.createTextNode(c) : c); });
+    return el;
+  }
+  function clear(el) { while (el.firstChild) el.removeChild(el.firstChild); return el; }
+
+  // ---------- İskelet ----------
+  var ta, msg, out, fileInput, analyzeBtn;
+  function build() {
+    clear(root);
+    ta = h("textarea", { id: "ccx-text", rows: "12", spellcheck: "false", placeholder: t("ph"), "aria-label": t("paste") });
+    if (state.keepText) ta.value = state.keepText;
+    fileInput = h("input", { type: "file", id: "ccx-file", accept: ".docx,.pdf,.txt,.md", class: "ccx-hide", onchange: onFile });
+    analyzeBtn = h("button", { type: "button", class: "ccx-btn ccx-primary", text: t("analyze"), onclick: run });
+    msg = h("div", { class: "ccx-msg", role: "status", "aria-live": "polite" });
+    out = h("div", { class: "ccx-out" });
+    root.appendChild(h("header", { class: "ccx-hero" }, [
+      h("div", { class: "ccx-top" }, [h("span", { class: "ccx-kicker", text: t("kicker") }),
+        h("div", { class: "ccx-lang", role: "group", "aria-label": "Language" }, ["en", "tr"].map(function (l) {
+          return h("button", { type: "button", "aria-pressed": String(l === lang), text: l.toUpperCase(), onclick: function () { setLang(l); } });
+        }))]),
+      h("h2", { class: "ccx-title", text: t("title") }), h("p", { class: "ccx-lede", text: t("lede") })
+    ]));
+    root.appendChild(h("section", { class: "ccx-card" }, [
+      h("label", { class: "ccx-label", for: "ccx-text", text: t("paste") }), ta,
+      h("div", { class: "ccx-actions" }, [analyzeBtn,
+        h("label", { class: "ccx-btn", for: "ccx-file", tabindex: "0", text: t("upload"), onkeydown: function (e) { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); fileInput.click(); } } }), fileInput,
+        h("button", { type: "button", class: "ccx-btn ccx-ghost", text: t("sample"), onclick: function () { ta.value = SAMPLE; run(); } }),
+        h("button", { type: "button", class: "ccx-btn ccx-ghost", text: t("clear"), onclick: function () { ta.value = ""; state.result = null; clear(out); clear(msg); ta.focus(); } })]),
+      h("p", { class: "ccx-privacy", text: t("privacy") }), msg
+    ]));
+    root.appendChild(out);
+    root.appendChild(h("footer", { class: "ccx-foot" }, [h("p", { text: t("limits") }),
+      h("p", {}, [t("credit") + " · ", h("a", { href: "https://github.com/Kurutkan/citationcheck", target: "_blank", rel: "noopener", text: t("source") })])]));
+    if (state.result) render();
+  }
+  function setLang(l) { lang = l; try { localStorage.setItem("ccx-lang", l); } catch (e) {} state.keepText = ta ? ta.value : ""; build(); }
+  function say(text, kind) { clear(msg); if (text) msg.appendChild(h("p", { class: "ccx-note ccx-" + (kind || "info"), text: text })); }
+
+  // ---------- Dosya okuma ----------
+  async function pdfToText(buffer) {
+    var lib = await import(PDFJS + "pdf.min.mjs");
+    lib.GlobalWorkerOptions.workerSrc = PDFJS + "pdf.worker.min.mjs";
+    var doc = await lib.getDocument({ data: buffer }).promise, pages = [];
+    for (var p = 1; p <= doc.numPages; p++) {
+      var content = await (await doc.getPage(p)).getTextContent(), text = "", lastY = null;
+      content.items.forEach(function (it) {
+        if (typeof it.str !== "string") return;
+        var y = it.transform ? it.transform[5] : null;
+        if (lastY !== null && y !== null && Math.abs(y - lastY) > 2 && text && text.slice(-1) !== "\n") text += "\n";
+        text += it.str;
+        if (it.hasEOL) text += "\n";
+        if (y !== null) lastY = y;
+      });
+      pages.push(text.split("\n").filter(function (ln) { return !/^\s*\d{1,4}\s*$/.test(ln); }).join("\n"));
+    }
+    return pages.join("\n");
+  }
+  async function onFile() {
+    var f = fileInput.files && fileInput.files[0];
+    if (!f) return;
+    fileInput.value = "";
+    if (f.size > MAX_MB * 1024 * 1024) return say(t("tooBig"), "bad");
+    var ext = (f.name.split(".").pop() || "").toLowerCase();
+    say(t("reading"), "info");
+    try {
+      var text;
+      if (ext === "txt" || ext === "md") text = await f.text();
+      else if (ext === "docx") text = await CC.docxToText(await f.arrayBuffer());
+      else if (ext === "pdf") { try { text = await pdfToText(await f.arrayBuffer()); } catch (e) { return say(t("pdfFail"), "bad"); } if (!text || text.replace(/\s/g, "").length < 200) return say(t("pdfFail"), "bad"); }
+      else return say(t("noType"), "bad");
+      ta.value = text;
+      run();
+    } catch (e) { say(t("badFile"), "bad"); }
+  }
+
+  // ---------- Çözümleme ----------
+  function run() {
+    var text = ta.value;
+    if (!text || !text.trim()) return say(t("empty"), "bad");
+    state.result = CC.analyze(text); state.validated = false; state.tab = "cross";
+    say("");
+    render();
+    out.scrollIntoView({ behavior: "smooth", block: "start" });
+  }
+  function metric(n, label, tone) { return h("div", { class: "ccx-metric" + (tone ? " ccx-" + tone : "") }, [h("b", { text: String(n) }), h("span", { text: label })]); }
+  function isCited(ref) { return state.result.cross.orphans.indexOf(ref) < 0; }
+  function isMatched(c) { return !state.result.cross.missing.some(function (m) { return m.key === c.key; }); }
+
+  function render() {
+    var r = state.result, x = r.cross;
+    clear(out);
+    if (!r.refsText) out.appendChild(h("p", { class: "ccx-note ccx-bad", text: t("noRefs") }));
+    if (r.numericStyle) out.appendChild(h("p", { class: "ccx-note ccx-warn", text: t("numeric") }));
+    out.appendChild(h("div", { class: "ccx-metrics" }, [metric(r.citations.length, t("mCit")), metric(r.references.length, t("mRef")),
+      metric(x.missing.length, t("mMiss"), x.missing.length ? "bad" : "ok"), metric(x.orphans.length, t("mOrph"), x.orphans.length ? "warn" : "ok"),
+      metric(x.fuzzy.length, t("mFuzzy"), x.fuzzy.length ? "warn" : "ok")]));
+    if (r.references.length) out.appendChild(h("div", { class: "ccx-bar ccx-vtop" }, [h("button", { type: "button", class: "ccx-btn ccx-primary", text: t("validate"), disabled: state.busy, onclick: function () { state.tab = "ref"; state.autoValidate = true; render(); } }), h("span", { class: "ccx-sub", text: t("validateNote") })]));
+    var tabs = [["cross", t("tCross"), x.missing.length + x.orphans.length + x.fuzzy.length], ["cit", t("tCit"), r.citations.length],
+      ["ref", t("tRef"), r.references.length], ["fmt", t("tFmt"), r.format.length]];
+    out.appendChild(h("div", { class: "ccx-tabs", role: "tablist" }, tabs.map(function (tb) {
+      return h("button", { type: "button", role: "tab", "aria-selected": String(state.tab === tb[0]), onclick: function () { state.tab = tb[0]; render(); } },
+        [tb[1] + " ", h("span", { class: "ccx-count", text: String(tb[2]) })]);
+    })));
+    var panel = h("div", { class: "ccx-panel", role: "tabpanel" });
+    ({ cross: panelCross, cit: panelCit, ref: panelRef, fmt: panelFmt })[state.tab](panel);
+    out.appendChild(panel);
+  }
+  function list(title, items, okText, tone, fn) {
+    var box = h("div", { class: "ccx-list" }, [h("h3", { text: title + " (" + items.length + ")" })]);
+    if (!items.length) box.appendChild(h("p", { class: "ccx-note ccx-ok", text: okText }));
+    else box.appendChild(h("ul", {}, items.map(function (it) { return h("li", { class: "ccx-" + tone }, fn(it)); })));
+    return box;
+  }
+  function panelCross(p) {
+    var x = state.result.cross;
+    p.appendChild(h("div", { class: "ccx-two" }, [
+      list(t("hMiss"), x.missing, t("okMiss"), "bad", function (c) { return [h("code", { text: c.raw }), h("small", { text: c.surname + " · " + c.year })]; }),
+      list(t("hOrph"), x.orphans, t("okOrph"), "warn", function (r) { return [h("span", { text: r.raw.length > 170 ? r.raw.slice(0, 170) + "…" : r.raw })]; })]));
+    if (x.fuzzy.length) {
+      var b = list(t("hFuzzy"), x.fuzzy, "", "info", function (f) {
+        return [h("code", { text: f.citation.raw }), h("small", { text: "↔ " + t("inRefs") + ": " + f.reference.surname + " (" + f.reference.year + ") · " + t(f.kind) })];
+      });
+      b.insertBefore(h("p", { class: "ccx-sub", text: t("fuzzyNote") }), b.children[1]);
+      p.appendChild(b);
+    }
+  }
+  function table(heads, rows) {
+    return h("div", { class: "ccx-scroll" }, [h("table", {}, [h("thead", {}, [h("tr", {}, heads.map(function (x) { return h("th", { scope: "col", text: x }); }))]),
+      h("tbody", {}, rows.map(function (cells) { return h("tr", {}, cells.map(function (c) { return typeof c === "string" ? h("td", { text: c }) : h("td", {}, [c]); })); }))])]);
+  }
+  function download(name, rows) {
+    var a = h("a", { href: URL.createObjectURL(new Blob([CC.toCsv(rows)], { type: "text/csv;charset=utf-8" })), download: name });
+    document.body.appendChild(a); a.click(); setTimeout(function () { URL.revokeObjectURL(a.href); a.remove(); }, 500);
+  }
+  function pill(text, tone) { return h("span", { class: "ccx-pill ccx-" + tone, text: text }); }
+  function panelCit(p) {
+    var cs = state.result.citations;
+    if (!cs.length) return p.appendChild(h("p", { class: "ccx-note ccx-info", text: t("none") }));
+    p.appendChild(h("div", { class: "ccx-bar" }, [h("button", { type: "button", class: "ccx-btn ccx-ghost", text: t("csvCit"), onclick: function () {
+      download("citations.csv", [[t("cRaw"), t("cAuth"), t("cYear"), t("cType"), t("cMatch")]].concat(cs.map(function (c) { return [c.raw, c.authors, c.year, c.type, isMatched(c) ? t("yes") : t("no")]; })));
+    } })]));
+    p.appendChild(table([t("cRaw"), t("cAuth"), t("cYear"), t("cType"), t("cMatch")], cs.map(function (c) {
+      return [c.raw, c.authors, c.year, c.type === "narrative" ? t("narr") : t("paren"), isMatched(c) ? pill(t("yes"), "ok") : pill(t("no"), "bad")];
+    })));
+  }
+  var TONE = { verified: "ok", low_confidence: "warn", not_found: "bad", doi_mismatch: "bad", error: "info", unchecked: "info" };
+  function panelRef(p) {
+    var rs = state.result.references;
+    if (!rs.length) return p.appendChild(h("p", { class: "ccx-note ccx-info", text: t("none") }));
+    var prog = h("div", { class: "ccx-progress", hidden: true }, [h("div", {})]);
+    var vbtn = h("button", { type: "button", class: "ccx-btn ccx-primary", text: t("validate"), disabled: state.busy, onclick: function () { validate(vbtn, prog); } });
+    p.appendChild(h("div", { class: "ccx-bar" }, [vbtn, h("button", { type: "button", class: "ccx-btn ccx-ghost", text: t("csvRef"), onclick: function () {
+      download("references.csv", [[t("rNo"), t("rRef"), t("rAuth"), t("rYear"), "DOI", t("rCited"), t("rStatus"), t("rFound"), "URL"]].concat(rs.map(function (r) {
+        return [r.index, r.raw, r.surname, r.year, r.doi, isCited(r) ? t("yes") : t("no"), t("s_" + r.status), r.match ? r.match.title : "", r.match ? r.match.url : ""];
+      })));
+    } })]));
+    p.appendChild(h("p", { class: "ccx-sub", text: t("validateNote") })); p.appendChild(prog); if (state.autoValidate) { state.autoValidate = false; validate(vbtn, prog); }
+    if (state.validated) {
+      var n = function (s) { return rs.filter(function (r) { return r.status === s; }).length; };
+      p.appendChild(h("div", { class: "ccx-metrics ccx-small" }, [metric(n("verified"), t("vSum"), "ok"), metric(n("low_confidence"), t("vLow"), "warn"),
+        metric(n("not_found"), t("vNot"), n("not_found") ? "bad" : "ok"), metric(n("doi_mismatch"), t("vDoi"), n("doi_mismatch") ? "bad" : "ok")].concat(n("error") ? [metric(n("error"), t("vErr"))] : [])));
+      if (n("doi_mismatch")) p.appendChild(h("p", { class: "ccx-note ccx-bad", text: t("doiWarn") }));
+      if (n("not_found")) p.appendChild(h("p", { class: "ccx-note ccx-info", text: t("notFoundWarn") }));
+      if (rs.length > MAX_VALIDATE) p.appendChild(h("p", { class: "ccx-note ccx-info", text: t("capped") }));
+    }
+    p.appendChild(table([t("rNo"), t("rRef"), t("rAuth"), t("rYear"), t("rCited"), t("rStatus"), t("rFound")], rs.map(function (r) {
+      var found = "";
+      if (r.match && r.status !== "not_found") found = r.match.url ? h("a", { href: r.match.url, target: "_blank", rel: "noopener", text: (r.match.title || r.match.url).slice(0, 110) }) : (r.match.title || "").slice(0, 110);
+      return [String(r.index), r.raw.length > 220 ? r.raw.slice(0, 220) + "…" : r.raw, r.surname || "", r.year || "", isCited(r) ? pill(t("yes"), "ok") : pill(t("no"), "warn"),
+        r.status === "unchecked" ? "-" : pill(t("s_" + r.status), TONE[r.status]), found];
+    })));
+  }
+  function panelFmt(p) {
+    var fs = state.result.format;
+    if (!fs.length) return p.appendChild(h("p", { class: "ccx-note ccx-ok", text: t("okFmt") }));
+    p.appendChild(h("ul", { class: "ccx-fmt" }, fs.map(function (f) {
+      return h("li", {}, [h("strong", { text: t("f_" + f.code, { a: f.a || "", b: f.b || "" }) }), h("code", { text: f.excerpt })]);
+    })));
+  }
+
+  // ---------- Veritabanı doğrulaması ----------
+  var cache = new Map();
+  async function fetchJson(url) {
+    if (cache.has(url)) return cache.get(url);
+    for (var attempt = 0; attempt < 2; attempt++) {
+      var ctl = new AbortController(), timer = setTimeout(function () { ctl.abort(); }, 15000);
+      try {
+        var res = await fetch(url, { signal: ctl.signal, headers: { Accept: "application/json" } });
+        clearTimeout(timer);
+        if ((res.status === 429 || res.status >= 500) && attempt === 0) { await new Promise(function (ok) { setTimeout(ok, 1500); }); continue; }
+        var out2 = { status: res.status, data: res.ok ? await res.json() : null };
+        if (res.ok || res.status === 404) cache.set(url, out2);
+        return out2;
+      } catch (e) { clearTimeout(timer); if (attempt === 1) throw e; }
+    }
+    throw new Error("net");
+  }
+  async function validate(btn, prog) {
+    if (state.busy) return;
+    state.busy = true; btn.disabled = true; prog.hidden = false;
+    var rs = state.result.references.slice(0, MAX_VALIDATE), bar = prog.firstChild, label = t("validating");
+    try {
+      await CC.validateAll(rs, fetchJson, function (d, n) { bar.style.width = Math.round(100 * d / n) + "%"; btn.textContent = label + " " + d + " / " + n; }, 4);
+    } finally { state.busy = false; state.validated = true; if (state.tab === "ref") render(); }
+  }
+
+  build();
+})();
+
+</script>
+</body>
+</html>
