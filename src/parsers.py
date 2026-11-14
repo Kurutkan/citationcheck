@@ -110,34 +110,20 @@ def _parse_docx(path: Path) -> str:
     önce eklenir.
     """
     from docx import Document  # python-docx
-    from docx.table import Table
+    from docx.oxml.ns import qn
     from docx.text.paragraph import Paragraph
 
     doc = Document(str(path))
     lines: list[str] = []
 
-    def _add_table(tbl) -> None:
-        seen: set[int] = set()
-        for row in tbl.rows:
-            for cell in row.cells:
-                if id(cell._tc) in seen:  # birleştirilmiş hücreler tekrar etmesin
-                    continue
-                seen.add(id(cell._tc))
-                for para in cell.paragraphs:
-                    t = para.text.strip()
-                    if t:
-                        lines.append(t)
-                for inner in cell.tables:
-                    _add_table(inner)
-
-    for child in doc.element.body.iterchildren():
-        tag = child.tag.rsplit("}", 1)[-1]
-        if tag == "p":
-            t = Paragraph(child, doc).text.strip()
-            if t:
-                lines.append(t)
-        elif tag == "tbl":
-            _add_table(Table(child, doc))
+    # Gövdedeki TÜM paragraflar belge sırasıyla okunur: düz paragraflar, tablo
+    # hücreleri (iç içe tablolar dahil), metin kutuları. Tablolar XML üzerinden
+    # dolaşılır; python-docx'in hücre nesneleri üzerinden yinelenen-hücre ayıklaması
+    # büyük tablolarda hücre atlayabildiği için kullanılmaz.
+    for p_el in doc.element.body.iter(qn("w:p")):
+        t = Paragraph(p_el, doc).text.strip()
+        if t:
+            lines.append(t)
 
     notes = _docx_notes(doc)
     if notes:
