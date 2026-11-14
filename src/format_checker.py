@@ -25,6 +25,7 @@ from dataclasses import dataclass, field
 from typing import List, Literal, Optional, TYPE_CHECKING
  
 from .extractors import Citation, Reference
+from .names import sort_key
  
 if TYPE_CHECKING:
     from .docx_inspector import DocxInspection, ParagraphFormatInfo
@@ -52,8 +53,8 @@ def check_alphabetical_sort(references: List[Reference]) -> List[FormatIssue]:
     """Referans listesi ilk yazar soyadına göre alfabetik olmalı."""
     issues: List[FormatIssue] = []
     for i in range(1, len(references)):
-        prev = (references[i - 1].first_author_surname or "").lower()
-        curr = (references[i].first_author_surname or "").lower()
+        prev = sort_key(references[i - 1].first_author_surname)
+        curr = sort_key(references[i].first_author_surname)
         if prev and curr and prev > curr:
             issues.append(FormatIssue(
                 severity="warning",
@@ -215,9 +216,10 @@ def _count_distinct_authors(authors_text: str) -> int:
     "Smith" → 1
     """
     cleaned = re.sub(_ETAL, "", authors_text, flags=re.IGNORECASE)
-    # Yazar isimlerini yakala (aynı zamanda WHO gibi acronymlere izin ver)
-    tokens = re.findall(_AUTHOR_TOKEN, cleaned)
-    return len(tokens)
+    # Yazarlar virgül ve bağlaçla ayrılır; bir yazarın kaç sözcüklü olduğu sayıyı
+    # etkilemez ("Çelik Aydın Demirtaş" veya "Gonçalves da Silva" tek yazardır).
+    parts = re.split(r"\s*,\s*(?:(?:&|and|ve|y|e|et|und)\s+)?|\s+(?:&|and|ve|y|e|et|und)\s+", cleaned)
+    return len([p for p in parts if p and re.search(r"\w", p)])
  
  
 def check_apa7_et_al(citations: List[Citation]) -> List[FormatIssue]:

@@ -85,10 +85,12 @@ class LLMClient:
             raise LLMUnavailableError(
                 "anthropic paketi yüklü değil. Kurulum: pip install anthropic pydantic"
             )
-        key = api_key or os.environ.get("ANTHROPIC_API_KEY")
+        # Anahtar yalnızca açıkça verilirse kullanılır; ortam değişkeni ya da
+        # paylaşılan sunucu anahtarı bilinçli olarak okunmaz.
+        key = api_key
         if not key:
             raise LLMUnavailableError(
-                "ANTHROPIC_API_KEY bulunamadı. UI dan girin veya ortam değişkeni ayarlayın."
+                "API anahtarı verilmedi. LLM özellikleri için kendi anahtarınızı arayüzden girin."
             )
         self.client = anthropic.Anthropic(api_key=key)
 
@@ -234,7 +236,7 @@ def should_assess_hallucination(ref: Reference) -> bool:
     """Bu referans halüsinasyon kontrolüne aday mı?"""
     if ref.validation_status in ("verified",):
         return False
-    if ref.validation_status in ("not_found", "low_confidence", "unchecked"):
+    if ref.validation_status in ("not_found", "low_confidence", "unchecked", "doi_mismatch"):
         return True
     return False
 

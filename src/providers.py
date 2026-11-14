@@ -3,8 +3,10 @@ Akademik veritabani saglayicilari (providers).
 """
 from __future__ import annotations
 import logging
+import time
 from typing import Optional
 import requests
+from urllib.parse import quote
 
 logger = logging.getLogger(__name__)
 _TIMEOUT = 10
@@ -17,21 +19,54 @@ def _headers(email=None):
     return {"User-Agent": ua}
 
 
+_CACHE: dict = {}
+_CACHE_MAX = 5000
+
+
 def _safe_get(url, params, email=None):
-    try:
-        resp = requests.get(url, params=params, headers=_headers(email), timeout=_TIMEOUT)
-        resp.raise_for_status()
-        return resp.json()
-    except Exception as exc:
-        logger.debug("Provider HTTP hatasi (%s): %s", url, exc)
-        return None
+    """GET + JSON. Basarili yanitlar surec ici onbellege alinir (ayni kaynak
+    tekrar sorgulanmaz); 429 / 5xx yanitlarinda bir kez yeniden denenir."""
+    key = (url, tuple(sorted((params or {}).items())))
+    if key in _CACHE:
+        return _CACHE[key]
+    for attempt in range(2):
+        try:
+            resp = requests.get(url, params=params, headers=_headers(email), timeout=_TIMEOUT)
+            if resp.status_code in (429, 500, 502, 503, 504) and attempt == 0:
+                time.sleep(1.5)
+                continue
+            if resp.status_code == 404:
+                if len(_CACHE) < _CACHE_MAX:
+                    _CACHE[key] = None
+                return None
+            resp.raise_for_status()
+            data = resp.json()
+            if len(_CACHE) < _CACHE_MAX:
+                _CACHE[key] = data
+            return data
+        except Exception as exc:
+            logger.debug("Provider HTTP hatasi (%s): %s", url, exc)
+            if attempt == 0:
+                continue
+            return None
+    return None
+
+
+def _clean_doi(doi):
+    d = (doi or "").strip()
+    low = d.lower()
+    for prefix in ("https://doi.org/", "http://doi.org/", "https://dx.doi.org/", "http://dx.doi.org/", "doi:"):
+        if low.startswith(prefix):
+            d = d[len(prefix):].strip()
+            break
+    return d.rstrip(".,;)")
 
 
 class CrossRefProvider:
     BASE = "https://api.crossref.org"
 
     def search_by_doi(self, doi, email=None):
-        data = _safe_get(f"{self.BASE}/works/{doi.strip()}", {}, email)
+        data = _safe_get(f"{self.BASE}/works/{quote(_clean_doi(doi), safe='/')}", {}, email)
         if not data:
             return None
         return self._normalize(data.get("message", {}))
@@ -75,10 +110,7 @@ class OpenAlexProvider:
     BASE = "https://api.openalex.org"
 
     def search_by_doi(self, doi, email=None):
-        doi_clean = doi.strip()
-        for prefix in ("https://doi.org/", "http://dx.doi.org/"):
-            if doi_clean.startswith(prefix):
-                doi_clean = doi_clean[len(prefix):]
+        doi_clean = _clean_doi(doi)
         params = {"filter": f"doi:{doi_clean}", "per_page": 1}
         if email:
             params["mailto"] = email

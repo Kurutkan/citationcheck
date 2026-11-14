@@ -26,7 +26,11 @@ from typing import Tuple
 _REF_HEADING_RE = re.compile(
     r"(?im)^[\s\*#>0-9\.\)\-]*"
     r"(references?|reference\s*list|works\s+cited|bibliography|"
-    r"kaynak(?:ça|ca|lar)|kaynaklar\s*ve\s*ek(?:ler)?)"
+    r"kaynak(?:ça|ca|lar)|kaynaklar\s*ve\s*ek(?:ler)?|"
+    # İspanyolca, Portekizce, Fransızca, İtalyanca, Almanca
+    r"referencias(?:\s+bibliogr[aá]ficas)?|refer[eê]ncias(?:\s+bibliogr[aá]ficas)?|"
+    r"bibliograf[ií]a|obras\s+citadas|r[eé]f[eé]rences(?:\s+bibliographiques)?|"
+    r"bibliographie|riferimenti(?:\s+bibliografici)?|literatur(?:verzeichnis)?)"
     r"\s*[:\.]?\s*$"
 )
 
@@ -99,16 +103,79 @@ def split_body_and_references(text: str) -> Tuple[str, str]:
 
 
 def _parse_docx(path: Path) -> str:
-    """DOCX dosyasını paragraf bazlı düz metne çevir."""
+    """DOCX dosyasını düz metne çevir.
+
+    Gövde paragrafları ve tablolar belgedeki sırayla okunur (tablo hücrelerindeki
+    atıflar kaybolmaz); dipnot ve sonnotlar gövdenin sonuna, kaynakça başlığından
+    önce eklenir.
+    """
     from docx import Document  # python-docx
+    from docx.table import Table
+    from docx.text.paragraph import Paragraph
 
     doc = Document(str(path))
     lines: list[str] = []
-    for para in doc.paragraphs:
-        t = para.text.strip()
-        if t:
-            lines.append(t)
+
+    def _add_table(tbl) -> None:
+        seen: set[int] = set()
+        for row in tbl.rows:
+            for cell in row.cells:
+                if id(cell._tc) in seen:  # birleştirilmiş hücreler tekrar etmesin
+                    continue
+                seen.add(id(cell._tc))
+                for para in cell.paragraphs:
+                    t = para.text.strip()
+                    if t:
+                        lines.append(t)
+                for inner in cell.tables:
+                    _add_table(inner)
+
+    for child in doc.element.body.iterchildren():
+        tag = child.tag.rsplit("}", 1)[-1]
+        if tag == "p":
+            t = Paragraph(child, doc).text.strip()
+            if t:
+                lines.append(t)
+        elif tag == "tbl":
+            _add_table(Table(child, doc))
+
+    notes = _docx_notes(doc)
+    if notes:
+        # Notları son kaynakça başlığından önce yerleştir ki gövde sayılsınlar
+        idx = None
+        for k in range(len(lines) - 1, -1, -1):
+            if _REF_HEADING_RE.match(lines[k]):
+                idx = k
+                break
+        if idx is None:
+            lines.extend(notes)
+        else:
+            lines[idx:idx] = notes
     return "\n".join(lines)
+
+
+def _docx_notes(doc) -> list[str]:
+    """Dipnot ve sonnot metinleri (varsa)."""
+    W = "{http://schemas.openxmlformats.org/wordprocessingml/2006/main}"
+    out: list[str] = []
+    try:
+        for rel in doc.part.rels.values():
+            if rel.is_external:
+                continue
+            if not (rel.reltype.endswith("/footnotes") or rel.reltype.endswith("/endnotes")):
+                continue
+            from lxml import etree
+            root = etree.fromstring(rel.target_part.blob)
+            for note in root:
+                if note.get(f"{W}type") in ("separator", "continuationSeparator", "continuationNotice"):
+                    continue
+                for para in note.iter(f"{W}p"):
+                    t = "".join(node.text or "" for node in para.iter(f"{W}t")).strip()
+                    if t:
+                        out.append(t)
+    except Exception:
+        return out
+    return out
 
 
 def _parse_pdf(path: Path) -> str:
@@ -120,5 +187,7 @@ def _parse_pdf(path: Path) -> str:
         for page in pdf.pages:
             t = page.extract_text()
             if t:
-                pages.append(t.strip())
+                # Yalnızca sayfa numarasından oluşan satırları at
+                kept = [ln for ln in t.split("\n") if not re.fullmatch(r"\s*\d{1,4}\s*", ln)]
+                pages.append("\n".join(kept).strip())
     return "\n".join(pages)
